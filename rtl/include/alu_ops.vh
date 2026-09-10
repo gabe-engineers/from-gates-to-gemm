@@ -1,3 +1,4 @@
+`define ALU_OP_MOV 4'b0001
 `define ALU_OP_ADD 4'b0010
 `define ALU_OP_SUB 4'b0011
 `define ALU_OP_AND 4'b0100
@@ -6,4 +7,3 @@
 `define ALU_OP_SHL 4'b0111
 `define ALU_OP_SHR 4'b1000
 `define ALU_OP_MUL 4'b1001
-`define ALU_OP_CMP 4'b1100

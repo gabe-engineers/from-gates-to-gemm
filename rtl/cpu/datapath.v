@@ -11,12 +11,12 @@ module datapath_16bit (
     input  [ 2:0] read_addr_a,
     input  [ 2:0] read_addr_b,
     input  [ 2:0] write_addr,
-    output [15:0] write_reg_data
+    output [15:0] write_reg_data,
+    output [15:0] read_data_a,
+    output [15:0] read_data_b
 );
   wire [15:0] alu_out;
   wire [15:0] write_data;
-  wire [15:0] read_data_a;
-  wire [15:0] read_data_b;
 
   assign write_data = writeback_select ? immediate : alu_out;
 
@@ -39,5 +39,4 @@ module datapath_16bit (
       read_data_b,
       alu_out
   );
-
 endmodule

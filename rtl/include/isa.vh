@@ -12,5 +12,5 @@
 `define OP_STORE 4'b1011
 `define OP_CMP 4'b1100
 `define OP_JMP 4'b1101
-`define OP_JZ 4'b1110
+`define OP_JE 4'b1110
 `define OP_HALT 4'b1111

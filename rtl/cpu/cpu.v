@@ -26,7 +26,9 @@ module cpu (
       .clk                      (clk),
       .reset                    (reset),
       .mem_read_data            (mem_read_data),
-      .mem_read_addr            (mem_address),
+      .datapath_read_data_a     (datapath_read_data_a),
+      .datapath_read_data_b     (datapath_read_data_b),
+      .mem_addr                 (mem_address),
       .mem_write_enable         (mem_write_enable),
       .datapath_write_enable    (datapath_write_enable),
       .datapath_writeback_select(datapath_writeback_select),
@@ -48,7 +50,9 @@ module cpu (
       .read_addr_a(datapath_src_reg_a),
       .read_addr_b(datapath_src_reg_b),
       .write_addr(datapath_dst_reg),
-      .write_reg_data(mem_write_data)
+      .write_reg_data(mem_write_data),
+      .read_data_a(datapath_read_data_a),
+      .read_data_b(datapath_read_data_b)
   );
 
 endmodule

@@ -46,7 +46,7 @@ module decoder (
         immediate = instruction_data[8:0];
       end
 
-      `OP_JMP, `OP_JZ: begin
+      `OP_JMP, `OP_JE: begin
         address = instruction_data[11:0];
       end
     endcase

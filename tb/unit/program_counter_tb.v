@@ -6,8 +6,8 @@ module program_counter_tb;
   reg         reset;
   reg         advance;
   reg         write_enable;
-  reg  [15:0] write_data;
-  wire [15:0] data_out;
+  reg  [ 8:0] write_data;
+  wire [ 8:0] data_out;
 
   program_counter dut (
     .clk         (clk),
@@ -20,7 +20,7 @@ module program_counter_tb;
 
 
   task test_case(input [8:0] test_number, input tc_reset, input tc_advance, input tc_write_enable,
-                 input [15:0] tc_write_data, input [15:0] expected_data_out);
+                 input [8:0] tc_write_data, input [8:0] expected_data_out);
 
     begin
 
@@ -48,63 +48,63 @@ module program_counter_tb;
 
     // Reset initializes PC to zero
     test_case(.test_number(1), .tc_reset(1'b1), .tc_advance(1'b0), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h0000));
+              .tc_write_data(9'h000), .expected_data_out(9'h000));
 
     // Hold after reset
     test_case(.test_number(2), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b0),
-              .tc_write_data(16'hAAAA), .expected_data_out(16'h0000));
+              .tc_write_data(9'h1AA), .expected_data_out(9'h000));
 
     // Advance: 0 -> 1
     test_case(.test_number(3), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h0001));
+              .tc_write_data(9'h000), .expected_data_out(9'h001));
 
     // Advance again: 1 -> 2
     test_case(.test_number(4), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h0002));
+              .tc_write_data(9'h000), .expected_data_out(9'h002));
 
     // Hold should retain current PC
     test_case(.test_number(5), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b0),
-              .tc_write_data(16'hFFFF), .expected_data_out(16'h0002));
+              .tc_write_data(9'h1FF), .expected_data_out(9'h002));
 
-    // Explicit write: PC = 0x1234
+    // Explicit write: PC = 0x134
     test_case(.test_number(6), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b1),
-              .tc_write_data(16'h1234), .expected_data_out(16'h1234));
+              .tc_write_data(9'h134), .expected_data_out(9'h134));
 
     // Hold written value
     test_case(.test_number(7), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h1234));
+              .tc_write_data(9'h000), .expected_data_out(9'h134));
 
-    // Advance after write: 0x1234 -> 0x1235
+    // Advance after write: 0x134 -> 0x135
     test_case(.test_number(8), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h1235));
+              .tc_write_data(9'h000), .expected_data_out(9'h135));
 
     // Write should beat advance
     test_case(.test_number(9), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b1),
-              .tc_write_data(16'hABCD), .expected_data_out(16'hABCD));
+              .tc_write_data(9'h1CD), .expected_data_out(9'h1CD));
 
     // Reset should beat write and advance
     test_case(.test_number(10), .tc_reset(1'b1), .tc_advance(1'b1), .tc_write_enable(1'b1),
-              .tc_write_data(16'hFFFF), .expected_data_out(16'h0000));
+              .tc_write_data(9'h1FF), .expected_data_out(9'h000));
 
     // Write maximum value
     test_case(.test_number(11), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b1),
-              .tc_write_data(16'hFFFF), .expected_data_out(16'hFFFF));
+              .tc_write_data(9'h1FF), .expected_data_out(9'h1FF));
 
-    // Advance wraps: 0xFFFF -> 0x0000
+    // Advance wraps: 0x1FF -> 0x000
     test_case(.test_number(12), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'h0000));
+              .tc_write_data(9'h000), .expected_data_out(9'h000));
 
     // Explicit write of zero
     test_case(.test_number(13), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b1),
-              .tc_write_data(16'h0000), .expected_data_out(16'h0000));
+              .tc_write_data(9'h000), .expected_data_out(9'h000));
 
     // Write arbitrary pattern
     test_case(.test_number(14), .tc_reset(1'b0), .tc_advance(1'b0), .tc_write_enable(1'b1),
-              .tc_write_data(16'hA5A5), .expected_data_out(16'hA5A5));
+              .tc_write_data(9'h1A5), .expected_data_out(9'h1A5));
 
     // Advance arbitrary pattern
     test_case(.test_number(15), .tc_reset(1'b0), .tc_advance(1'b1), .tc_write_enable(1'b0),
-              .tc_write_data(16'h0000), .expected_data_out(16'hA5A6));
+              .tc_write_data(9'h000), .expected_data_out(9'h1A6));
 
     $finish;
 

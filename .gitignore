@@ -1,2 +1,7 @@
-# Local simulator executables
+# Generated simulator artifacts
+build/
+*-sim
 *_sim
+*.vcd
+*.fst
+*.vvp

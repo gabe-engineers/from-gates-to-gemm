@@ -112,9 +112,9 @@ module decoder_tb;
               .expected_opcode(`OP_JMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h155));
 
-    // JZ 0x123
+    // JE 0x123
     test_case(.test_number(15), .tc_instruction_data(16'b1110_000_100100011),
-              .expected_opcode(`OP_JZ), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
+              .expected_opcode(`OP_JE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h123));
 
     // HALT
@@ -173,9 +173,9 @@ module decoder_tb;
               .expected_opcode(`OP_JMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h1FF));
 
-    // JZ address 0
+    // JE address 0
     test_case(.test_number(27), .tc_instruction_data(16'b1110_000_000000000),
-              .expected_opcode(`OP_JZ), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
+              .expected_opcode(`OP_JE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
 
     // HALT with garbage payload bits

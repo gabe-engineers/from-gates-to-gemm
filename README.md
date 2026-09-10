@@ -4,6 +4,45 @@ Supports 9 bits for addressing memory. Word addressable only (not byte addressab
  
 Number of registers: 8 16-bit registers
 
+## Simulation
+
+Install [Icarus Verilog](https://steveicarus.github.io/iverilog/) and
+[just](https://just.systems/), then run:
+
+```sh
+just test cpu_tb  # Run one testbench.
+just test-all     # Run every testbench.
+just clean        # Remove generated build artifacts.
+```
+
+Simulation executables are written to `build/sim/`, which is ignored by Git.
+
+## Project Layout
+
+- `rtl/include/` — shared ISA, ALU, and FSM definitions.
+- `rtl/lib/` — reusable primitives such as gates, adders, and registers.
+- `rtl/cpu/` — CPU, datapath, ALU, decoder, control, and register-file RTL.
+- `rtl/memory/` — RAM RTL.
+- `rtl/top/` — chip-level integration RTL.
+- `tb/unit/` — focused module testbenches.
+- `tb/integration/` — datapath and CPU integration testbenches.
+- `build/sim/` — generated simulation artifacts; ignored by Git.
+
+## Execution Timing
+
+The CPU uses a multi-cycle design with a combined fetch/decode phase rather than a separate
+decode state:
+
+1. **FETCH/DECODE** — The program counter addresses instruction memory. On the rising clock
+   edge, the fetched instruction is captured in the instruction register (IR), and its fields are
+   decoded combinationally.
+2. **EXECUTE** — The stable decoded controls drive the datapath. Register-file writeback occurs
+   on the following rising edge.
+3. **MEMORY** — `LOAD` and `STORE` use an additional memory phase before returning to fetch.
+
+Capturing the IR and writing the register file on separate edges avoids a write dependency: a
+register file must not act on an instruction that is being written into the IR on that same edge.
+
 # Instruction Set Architecture
 
 - LDI rd immediate
@@ -20,8 +59,11 @@ Number of registers: 8 16-bit registers
 - CMP r1 r2
 - MOV rd r1
 - JMP addr
-- JZ addr
+- JE addr
 - HALT
+
+`CMP` stores whether its two operands are equal in a control-unit flag. `JE` writes its target to
+the program counter only when that flag is set; `JMP` always writes its target.
 
 
 ## Instruction Format
@@ -59,7 +101,7 @@ Instructions like CMP and MOV use two registers as input.
 
 ### 1 Memory Address
 
-Instructions like JMP and JZ use only 1 memory address as input.
+Instructions like JMP and JE use only 1 memory address as input.
 
 | Bits           | 15:12  | 11:0 |
 | -------------- | ------ | -------- |
@@ -73,4 +115,3 @@ LDI uses the 1 register and 1 immediate format.
 | Bits           | 15:12  | 11:9                 | 8:0       |
 | -------------- | ------ | -------------------- | --------- |
 | Interpretation | Opcode | Destination register | Immediate |
-

@@ -1,3 +1,5 @@
+`include "gates.v"
+
 module gates;
 
   reg a;
