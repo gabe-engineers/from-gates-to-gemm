@@ -92,15 +92,15 @@ module decoder_tb;
               .expected_opcode(`OP_MUL), .expected_dst_reg(8'd6), .expected_src_reg_a(8'd5),
               .expected_reg_b(8'd4), .expected_immediate(16'd0), .expected_address(9'd0));
 
-    // LOAD R5, [0x155]
-    test_case(.test_number(11), .tc_instruction_data(16'b1010_101_101010101),
+    // LOAD R5, R6
+    test_case(.test_number(11), .tc_instruction_data(16'b1010_101_110_000000),
               .expected_opcode(`OP_LOAD), .expected_dst_reg(8'd5), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h155));
+              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
 
-    // STORE R7, [0x1FF]
-    test_case(.test_number(12), .tc_instruction_data(16'b1011_111_111111111),
-              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h1FF));
+    // STORE R7, R3
+    test_case(.test_number(12), .tc_instruction_data(16'b1011_111_011_000000),
+              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd7),
+              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
 
     // CMP R3, R6
     test_case(.test_number(13), .tc_instruction_data(16'b1100_011_110_000000),
@@ -132,15 +132,15 @@ module decoder_tb;
               .expected_opcode(`OP_LDI), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'h01FF), .expected_address(9'd0));
 
-    // LOAD boundary: R0, address 0
+    // LOAD boundary: R0, R0
     test_case(.test_number(19), .tc_instruction_data(16'b1010_000_000000000),
               .expected_opcode(`OP_LOAD), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
               .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
 
-    // STORE boundary: R7, max address
-    test_case(.test_number(20), .tc_instruction_data(16'b1011_111_111111111),
-              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h1FF));
+    // STORE R7, R6 with all reserved bits set: the decoder must ignore them.
+    test_case(.test_number(20), .tc_instruction_data(16'b1011_111_110_111111),
+              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd7),
+              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
 
     // ADD: all registers different, high values
     test_case(.test_number(21), .tc_instruction_data(16'b0010_111_110_101_000),

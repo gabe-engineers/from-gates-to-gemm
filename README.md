@@ -11,6 +11,7 @@ Install [Icarus Verilog](https://steveicarus.github.io/iverilog/) and
 
 ```sh
 just test cpu_tb  # Run one testbench.
+just test-assembler  # Run assembler unit and CPU-integration tests.
 just test-all     # Run every testbench.
 just clean        # Remove generated build artifacts.
 ```
@@ -46,8 +47,8 @@ register file must not act on an instruction that is being written into the IR o
 # Instruction Set Architecture
 
 - LDI rd immediate
-- LOAD rd addr
-- STORE rs addr
+- LOAD rd ra
+- STORE rs ra
 - ADD rd r1 r2
 - SUB rd r1 r2
 - SHL rd r1 r2
@@ -70,14 +71,18 @@ the program counter only when that flag is set; `JMP` always writes its target.
 
 Every instruction is 16-bits wide. The first 4 bits are always the Opcode, the rest of the bits are interpreted based on the Opcode and can be of 5 different types.
 
-### 1 Register and 1 Memory Address
+### Register-Indirect Memory Operations
 
-LOAD and STORE instructions have this type. The format is `OP r addr` standing for the register destination/start and the memory address for the operation.
+`LOAD rd ra` and `STORE rs ra` use a register as the memory address. `rd` is the
+load destination, `rs` is the value to store, and `ra` is the address register. Memory
+is word-addressed with a 9-bit address bus, so these instructions use `ra[8:0]`; the
+upper seven bits are ignored. The remaining six instruction bits are reserved and the
+assembler emits them as zero.
 
 
-| Bits           | 15:12  | 11:9     | 8:0            |
-| -------------- | ------ | -------- | -------------- |
-| Interpretation | Opcode | Register | Memory address |
+| Bits           | 15:12  | 11:9                              | 8:6              | 5:0      |
+| -------------- | ------ | --------------------------------- | ---------------- | -------- |
+| Interpretation | Opcode | Load destination / store value    | Address register | Reserved |
 
 
 ### 3 Register Operations

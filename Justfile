@@ -22,6 +22,7 @@ test target:
 test-all:
     just test adder_tb
     just test alu_tb
+    just test-assembler
     just test control_fsm_tb
     just test cpu_tb
     just test datapath_tb
@@ -31,6 +32,9 @@ test-all:
     just test ram_tb
     just test register_file_tb
     just test register_tb
+
+test-assembler:
+    python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 clean:
     rm -rf build

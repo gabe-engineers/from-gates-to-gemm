@@ -26,9 +26,14 @@ module decoder (
         src_reg_b = instruction_data[5:3];
       end
 
-      `OP_LOAD, `OP_STORE: begin
+      `OP_LOAD: begin
         dst_reg = instruction_data[11:9];
-        address = instruction_data[8:0];
+        src_reg_b = instruction_data[8:6];
+      end
+
+      `OP_STORE: begin
+        src_reg_a = instruction_data[11:9];
+        src_reg_b = instruction_data[8:6];
       end
 
       `OP_CMP: begin

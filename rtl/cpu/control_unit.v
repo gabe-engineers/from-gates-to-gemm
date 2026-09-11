@@ -37,8 +37,6 @@ module control_unit (
 
   wire [15:0] ir;
 
-  wire [15:0] datapath_write_reg_data;
-
   // FETCH/DECODE captures the memory word into the IR at the FETCH/DECODE -> EXECUTE edge.
   register ir_module (
       .clk         (clk),
@@ -108,7 +106,13 @@ module control_unit (
       (fsm_out_state == `FSM_EXECUTE && is_execute_register_write_op(decoder_out_opcode)) ||
       (fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD);
 
-  assign mem_addr = fsm_out_state == `FSM_FETCH_DECODE ? pc : decoder_out_address;
+  // LOAD and STORE use the low nine bits of their address-register operand.
+  // The register value is available in both EXECUTE and MEMORY, which keeps the
+  // address stable for the complete memory operation.
+  assign mem_addr =
+      fsm_out_state == `FSM_FETCH_DECODE ? pc :
+      (decoder_out_opcode == `OP_LOAD || decoder_out_opcode == `OP_STORE ?
+       datapath_read_data_b[8:0] : decoder_out_address);
 
   // The PC advances when the current instruction completes execution.
   assign advance_pc = fsm_out_state == `FSM_EXECUTE;

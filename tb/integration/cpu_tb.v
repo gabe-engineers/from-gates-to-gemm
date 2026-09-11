@@ -70,9 +70,9 @@ module cpu_tb;
 
       if (mem_write_enable !== expected_mem_write_enable ||
           halted !== expected_halted ||
-          (expected_mem_write_enable &&
-           (mem_address !== expected_mem_address ||
-            mem_write_data !== expected_mem_write_data))) begin
+          ((tc_instruction[15:12] == `OP_LOAD || tc_instruction[15:12] == `OP_STORE) &&
+           mem_address !== expected_mem_address) ||
+          (expected_mem_write_enable && mem_write_data !== expected_mem_write_data)) begin
         $fatal(
             1,
             "Test case #%d failed - instruction: %h | write_enable: %d, address: %d, write_data: %d, halted: %d | expected write_enable: %d, address: %d, write_data: %d, halted: %d",
@@ -165,41 +165,51 @@ module cpu_tb;
   endtask
 
   initial begin
-    // LDI R1, 0x05A
-    test_case(.test_number(1), .tc_reset(1'b0), .tc_instruction({`OP_LDI, 3'd1, 9'h05A}),
+    // R0 is the address register for the memory-operation checks below.
+    test_case(.test_number(1), .tc_reset(1'b0), .tc_instruction({`OP_LDI, 3'd0, 9'd100}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_FETCH_DECODE),
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    // STORE R1, [100] proves that LDI wrote 0x05A to R1.
-    test_case(.test_number(2), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd1, 9'd100}),
+    // LDI R1, 0x05A
+    test_case(.test_number(2), .tc_reset(1'b0), .tc_instruction({`OP_LDI, 3'd1, 9'h05A}),
+              .tc_load_data(16'b0), .tc_evaluation_state(`FSM_FETCH_DECODE),
+              .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
+              .expected_mem_write_data(16'b0), .expected_halted(1'b0));
+
+    // STORE R1, R0 exercises separate value and address register operands.
+    test_case(.test_number(3), .tc_reset(1'b0),
+              .tc_instruction({`OP_STORE, 3'd1, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
               .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h005A), .expected_halted(1'b0));
 
-    // LOAD R2, [100] using the value previously produced by LDI.
-    test_case(.test_number(3), .tc_reset(1'b0), .tc_instruction({`OP_LOAD, 3'd2, 9'd100}),
+    // LOAD R2, R0 uses the same register-derived memory address.
+    test_case(.test_number(4), .tc_reset(1'b0),
+              .tc_instruction({`OP_LOAD, 3'd2, 3'd0, 6'b000000}),
               .tc_load_data(16'h005A), .tc_evaluation_state(`FSM_MEMORY),
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    // STORE R2, [101] proves that LOAD wrote 0x05A to R2.
-    test_case(.test_number(4), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd2, 9'd101}),
+    // STORE R2, R0 proves that LOAD wrote 0x05A to R2.
+    test_case(.test_number(5), .tc_reset(1'b0),
+              .tc_instruction({`OP_STORE, 3'd2, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd101),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h005A), .expected_halted(1'b0));
 
     // ADD R3, R1, R2 verifies a dependency on the prior LDI and LOAD results.
-    test_case(.test_number(5), .tc_reset(1'b0),
+    test_case(.test_number(6), .tc_reset(1'b0),
               .tc_instruction({`OP_ADD, 3'd3, 3'd1, 3'd2, 3'b000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_FETCH_DECODE),
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    // STORE R3, [102] proves ADD produced 0x00B4.
-    test_case(.test_number(6), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd3, 9'd102}),
+    // STORE R3, R0 proves ADD produced 0x00B4.
+    test_case(.test_number(66), .tc_reset(1'b0),
+              .tc_instruction({`OP_STORE, 3'd3, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd102),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h00B4), .expected_halted(1'b0));
 
     // Prepare boundary operands for the remaining ALU tests.
@@ -220,9 +230,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(10), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 9'd103}),
+    test_case(.test_number(10), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd103),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0200), .expected_halted(1'b0));
 
     // SUB R6, R4, R3: unsigned underflow, 1 - 0x01FF = 0xFE02.
@@ -232,9 +242,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(12), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 9'd104}),
+    test_case(.test_number(12), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd104),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'hFE02), .expected_halted(1'b0));
 
     // SUB R7, R4, R4: equal operands must yield zero.
@@ -244,9 +254,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(14), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd105}),
+    test_case(.test_number(14), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd105),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // SUB R6, R7, R4 creates 0xFFFF; ADD R7, R6, R4 must wrap back to zero.
@@ -256,9 +266,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(16), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 9'd106}),
+    test_case(.test_number(16), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd106),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'hFFFF), .expected_halted(1'b0));
 
     test_case(.test_number(17), .tc_reset(1'b0),
@@ -267,9 +277,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(18), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd107}),
+    test_case(.test_number(18), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd107),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // SHL R6, R4, R5: 1 << 15 exercises the destination sign bit.
@@ -284,9 +294,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(21), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 9'd108}),
+    test_case(.test_number(21), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd6, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd108),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h8000), .expected_halted(1'b0));
 
     // SHL R7, R6, R5: 0x0100 << 8 overflows the 16-bit result to zero.
@@ -306,9 +316,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(25), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd109}),
+    test_case(.test_number(25), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd109),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // SHR uses a zero-fill logical shift: 0x8000 >> 1 = 0x4000.
@@ -334,9 +344,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(30), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd110}),
+    test_case(.test_number(30), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd110),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h4000), .expected_halted(1'b0));
 
     // A shift count at least as wide as the word shifts every bit out.
@@ -351,9 +361,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(33), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd111}),
+    test_case(.test_number(33), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd111),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // MUL R7, R1, R2 verifies a dependency on the values produced by LDI and LOAD.
@@ -363,9 +373,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(35), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd112}),
+    test_case(.test_number(35), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd112),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h1FA4), .expected_halted(1'b0));
 
     // MUL R7, R3, R7 checks a destination/source alias and truncates 0x01FF * 0x0100 to 0xFF00.
@@ -380,9 +390,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(38), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd113}),
+    test_case(.test_number(38), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd113),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'hFF00), .expected_halted(1'b0));
 
     // OR R5, R6, R4 builds 0x8001 from disjoint high and low bits.
@@ -392,9 +402,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(40), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 9'd114}),
+    test_case(.test_number(40), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd114),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h8001), .expected_halted(1'b0));
 
     // AND R7, R5, R3 retains only their shared low bit.
@@ -404,9 +414,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(42), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd115}),
+    test_case(.test_number(42), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd115),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0001), .expected_halted(1'b0));
 
     // AND R7, R6, R3 has no common set bits and must yield zero.
@@ -416,9 +426,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(44), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd116}),
+    test_case(.test_number(44), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd116),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // OR R5, R6, R3 combines the high bit with every bit in 0x01FF.
@@ -428,9 +438,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(46), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 9'd117}),
+    test_case(.test_number(46), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd5, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd117),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h81FF), .expected_halted(1'b0));
 
     // XOR R7, R5, R3 removes the common low bits and leaves the high bit.
@@ -440,9 +450,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(48), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd118}),
+    test_case(.test_number(48), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd118),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h8000), .expected_halted(1'b0));
 
     // XOR of a value with itself must be zero.
@@ -452,9 +462,9 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(50), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd119}),
+    test_case(.test_number(50), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd119),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
               .expected_mem_write_data(16'h0000), .expected_halted(1'b0));
 
     // MOV R7, R5 verifies that MOV writes source operand A through the ALU path.
@@ -464,9 +474,23 @@ module cpu_tb;
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b0));
 
-    test_case(.test_number(52), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 9'd120}),
+    test_case(.test_number(52), .tc_reset(1'b0), .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
               .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
-              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd120),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'd100),
+              .expected_mem_write_data(16'h81FF), .expected_halted(1'b0));
+
+    // Memory addresses are the low nine bits of the address register.
+    test_case(.test_number(67), .tc_reset(1'b0),
+              .tc_instruction({`OP_MOV, 3'd0, 3'd5, 6'b000000}),
+              .tc_load_data(16'b0), .tc_evaluation_state(`FSM_FETCH_DECODE),
+              .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
+              .expected_mem_write_data(16'b0), .expected_halted(1'b0));
+
+    // R0 is now 0x81FF, whose low nine bits select memory address 0x1FF.
+    test_case(.test_number(68), .tc_reset(1'b0),
+              .tc_instruction({`OP_STORE, 3'd7, 3'd0, 6'b000000}),
+              .tc_load_data(16'b0), .tc_evaluation_state(`FSM_MEMORY),
+              .expected_mem_write_enable(1'b1), .expected_mem_address(9'h1FF),
               .expected_mem_write_data(16'h81FF), .expected_halted(1'b0));
 
     // CMP and JE are control-unit operations: equality is latched by CMP and consumed by JE.

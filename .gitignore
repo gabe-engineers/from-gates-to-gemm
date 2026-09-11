@@ -5,3 +5,8 @@ build/
 *.vcd
 *.fst
 *.vvp
+
+# Generated assembler and Python artifacts
+program.hex
+__pycache__/
+*.py[cod]

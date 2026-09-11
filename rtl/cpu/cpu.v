@@ -22,6 +22,11 @@ module cpu (
   wire [15:0] datapath_read_data_a;
   wire [15:0] datapath_read_data_b;
 
+  // STORE takes its value from source operand A.  Memory operations use source
+  // operand B as their address register (truncated to the RAM's 9-bit bus in
+  // the control unit).
+  assign mem_write_data = datapath_read_data_a;
+
   control_unit control_unit_module (
       .clk                      (clk),
       .reset                    (reset),
@@ -50,7 +55,7 @@ module cpu (
       .read_addr_a(datapath_src_reg_a),
       .read_addr_b(datapath_src_reg_b),
       .write_addr(datapath_dst_reg),
-      .write_reg_data(mem_write_data),
+      .write_reg_data(),
       .read_data_a(datapath_read_data_a),
       .read_data_b(datapath_read_data_b)
   );
