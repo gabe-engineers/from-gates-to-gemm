@@ -1,244 +1,50 @@
 `include "decoder.v"
 
 module decoder_tb;
-
   reg  [15:0] instruction_data;
-  wire [ 3:0] opcode;
+  wire [ 4:0] opcode;
   wire [ 2:0] dst_reg;
   wire [ 2:0] src_reg_a;
   wire [ 2:0] src_reg_b;
   wire [15:0] immediate;
-  wire [ 8:0] address;
-  wire        memory_vectorized;
-  wire [ 2:0] halt_or_vector_subop;
+  wire [15:0] address;
 
-  decoder dut (
-    instruction_data,
-    opcode,
-    dst_reg,
-    src_reg_a,
-    src_reg_b,
-    immediate,
-    address,
-    memory_vectorized,
-    halt_or_vector_subop
-  );
+  decoder dut (instruction_data, opcode, dst_reg, src_reg_a, src_reg_b, immediate, address);
 
-  task test_case(input [7:0] test_number, input [15:0] tc_instruction_data,
-                 input [3:0] expected_opcode, input [2:0] expected_dst_reg,
-                 input [2:0] expected_src_reg_a, input [2:0] expected_reg_b,
-                 input [15:0] expected_immediate, input [8:0] expected_address);
+  task test_case(input [7:0] number, input [15:0] instruction,
+                 input [4:0] expected_opcode, input [2:0] expected_dst,
+                 input [2:0] expected_a, input [2:0] expected_b,
+                 input [15:0] expected_immediate, input [15:0] expected_address);
     begin
-      instruction_data = tc_instruction_data;
-
-      #10;
-
-      if (opcode != expected_opcode || dst_reg != expected_dst_reg ||
-          src_reg_a != expected_src_reg_a || src_reg_b != expected_reg_b ||
-          immediate != expected_immediate || address != expected_address) begin
-        $display(
-            "Test case #%d failed - instruction_data: %h | got opcode=%h dst_reg=%b src_reg_a=%h src_reg_b=%h immediate=%h address=%h | expected opcode=%h dst_reg=%b src_reg_a=%h src_reg_b=%h immediate=%h address=%h",
-            test_number, instruction_data, opcode, dst_reg, src_reg_a, src_reg_b, immediate,
-            address, expected_opcode, expected_dst_reg, expected_src_reg_a, expected_reg_b,
-            expected_immediate, expected_address);
-      end
-    end
-  endtask
-
-  task test_halt_or_vector_subop(input [7:0] test_number, input [15:0] tc_instruction_data,
-                                 input [2:0] expected_subop);
-    begin
-      instruction_data = tc_instruction_data;
-      #10;
-
-      if (halt_or_vector_subop !== expected_subop)
-        $fatal(1,
-               "Test case #%d failed - instruction_data: %h | halt_or_vector_subop: %b, expected: %b",
-               test_number, instruction_data, halt_or_vector_subop, expected_subop);
-    end
-  endtask
-
-  task test_memory_vector_flag(input [7:0] test_number, input [15:0] tc_instruction_data,
-                               input expected_memory_vectorized);
-    begin
-      instruction_data = tc_instruction_data;
-      #10;
-
-      if (memory_vectorized !== expected_memory_vectorized)
-        $fatal(1,
-               "Test case #%d failed - instruction_data: %h | memory_vectorized: %b, expected: %b",
-               test_number, instruction_data, memory_vectorized, expected_memory_vectorized);
+      instruction_data = instruction;
+      #1;
+      if (opcode !== expected_opcode || dst_reg !== expected_dst ||
+          src_reg_a !== expected_a || src_reg_b !== expected_b ||
+          immediate !== expected_immediate || address !== expected_address)
+        $fatal(1, "decoder case %0d failed for %h", number, instruction);
     end
   endtask
 
   initial begin
-    // LDI R3, 0x12A
-    test_case(.test_number(1), .tc_instruction_data(16'b0000_011_100101010),
-              .expected_opcode(`OP_LDI), .expected_dst_reg(8'd3), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'h012A), .expected_address(9'd0));
+    test_case(1, {`OP_LDI, 3'd7, 8'hFF}, `OP_LDI, 3'd7, 3'd0, 3'd0, 16'h00FF, 16'd0);
+    test_case(2, {`OP_MOV, 3'd4, 3'd1, 5'd0}, `OP_MOV, 3'd4, 3'd1, 3'd0, 16'd0, 16'd0);
+    test_case(3, {`OP_ADD, 3'd1, 3'd2, 3'd3, 2'd0}, `OP_ADD, 3'd1, 3'd2, 3'd3, 16'd0, 16'd0);
+    test_case(4, {`OP_LOAD, 3'd5, 3'd6, 5'd0}, `OP_LOAD, 3'd5, 3'd0, 3'd6, 16'd0, 16'd0);
 
-    // MOV R4, R1
-    test_case(.test_number(2), .tc_instruction_data(16'b0001_100_001_000000),
-              .expected_opcode(`OP_MOV), .expected_dst_reg(8'd4), .expected_src_reg_a(8'd1),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
+    // Address-first STORE is routed internally as A=value, B=address.
+    test_case(5, {`OP_STORE, 3'd3, 3'd7, 5'd0}, `OP_STORE, 3'd0, 3'd7, 3'd3, 16'd0, 16'd0);
+    test_case(6, {`OP_CMP, 3'd3, 3'd6, 5'd0}, `OP_CMP, 3'd0, 3'd3, 3'd6, 16'd0, 16'd0);
+    test_case(7, {`OP_JMP, 11'h7FF}, `OP_JMP, 3'd0, 3'd0, 3'd0, 16'd0, 16'h07FF);
+    test_case(8, {`OP_JE, 11'h123}, `OP_JE, 3'd0, 3'd0, 3'd0, 16'd0, 16'h0123);
+    test_case(9, {`OP_HALT, 11'd0}, `OP_HALT, 3'd0, 3'd0, 3'd0, 16'd0, 16'd0);
+    test_case(10, {`OP_VLD, 3'd7, 3'd6, 5'd0}, `OP_VLD, 3'd7, 3'd0, 3'd6, 16'd0, 16'd0);
+    test_case(11, {`OP_VST, 3'd1, 3'd7, 5'd0}, `OP_VST, 3'd0, 3'd7, 3'd1, 16'd0, 16'd0);
+    test_case(12, {`OP_VADD, 3'd5, 3'd7, 3'd6, 2'd0}, `OP_VADD, 3'd5, 3'd7, 3'd6, 16'd0, 16'd0);
+    test_case(13, {`OP_VDOT, 3'd5, 3'd7, 3'd6, 2'd0}, `OP_VDOT, 3'd5, 3'd7, 3'd6, 16'd0, 16'd0);
 
-    // ADD R1, R2, R3
-    test_case(.test_number(3), .tc_instruction_data(16'b0010_001_010_011_000),
-              .expected_opcode(`OP_ADD), .expected_dst_reg(8'd1), .expected_src_reg_a(8'd2),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // SUB R7, R0, R6
-    test_case(.test_number(4), .tc_instruction_data(16'b0011_111_000_110_000),
-              .expected_opcode(`OP_SUB), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // AND R0, R1, R7
-    test_case(.test_number(5), .tc_instruction_data(16'b0100_000_001_111_000),
-              .expected_opcode(`OP_AND), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd1),
-              .expected_reg_b(8'd7), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // OR R3, R2, R5
-    test_case(.test_number(6), .tc_instruction_data(16'b0101_011_010_101_000),
-              .expected_opcode(`OP_OR), .expected_dst_reg(8'd3), .expected_src_reg_a(8'd2),
-              .expected_reg_b(8'd5), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // XOR R7, R7, R7
-    test_case(.test_number(7), .tc_instruction_data(16'b0110_111_111_111_000),
-              .expected_opcode(`OP_XOR), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd7),
-              .expected_reg_b(8'd7), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // SHL R4, R4, R1
-    test_case(.test_number(8), .tc_instruction_data(16'b0111_100_100_001_000),
-              .expected_opcode(`OP_SHL), .expected_dst_reg(8'd4), .expected_src_reg_a(8'd4),
-              .expected_reg_b(8'd1), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // SHR R2, R7, R3
-    test_case(.test_number(9), .tc_instruction_data(16'b1000_010_111_011_000),
-              .expected_opcode(`OP_SHR), .expected_dst_reg(8'd2), .expected_src_reg_a(8'd7),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // MUL R6, R5, R4
-    test_case(.test_number(10), .tc_instruction_data(16'b1001_110_101_100_000),
-              .expected_opcode(`OP_MUL), .expected_dst_reg(8'd6), .expected_src_reg_a(8'd5),
-              .expected_reg_b(8'd4), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // LOAD R5, R6
-    test_case(.test_number(11), .tc_instruction_data(16'b1010_101_110_000000),
-              .expected_opcode(`OP_LOAD), .expected_dst_reg(8'd5), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // STORE R7, R3
-    test_case(.test_number(12), .tc_instruction_data(16'b1011_111_011_000000),
-              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd7),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // CMP R3, R6
-    test_case(.test_number(13), .tc_instruction_data(16'b1100_011_110_000000),
-              .expected_opcode(`OP_CMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd3),
-              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // JMP 0x155
-    test_case(.test_number(14), .tc_instruction_data(16'b1101_000_101010101),
-              .expected_opcode(`OP_JMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h155));
-
-    // JE 0x123
-    test_case(.test_number(15), .tc_instruction_data(16'b1110_000_100100011),
-              .expected_opcode(`OP_JE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h123));
-
-    // HALT_OR_VECTOR
-    test_case(.test_number(16), .tc_instruction_data(16'b1111_000000000000),
-              .expected_opcode(`OP_HALT_OR_VECTOR), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // LDI boundary: R0, immediate 0
-    test_case(.test_number(17), .tc_instruction_data(16'b0000_000_000000000),
-              .expected_opcode(`OP_LDI), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // LDI boundary: R7, max 9-bit immediate
-    test_case(.test_number(18), .tc_instruction_data(16'b0000_111_111111111),
-              .expected_opcode(`OP_LDI), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'h01FF), .expected_address(9'd0));
-
-    // LOAD boundary: R0, R0
-    test_case(.test_number(19), .tc_instruction_data(16'b1010_000_000000000),
-              .expected_opcode(`OP_LOAD), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // STORE R7, R6 with the vector flag and all remaining reserved bits set.
-    test_case(.test_number(20), .tc_instruction_data(16'b1011_111_110_111111),
-              .expected_opcode(`OP_STORE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd7),
-              .expected_reg_b(8'd6), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // ADD: all registers different, high values
-    test_case(.test_number(21), .tc_instruction_data(16'b0010_111_110_101_000),
-              .expected_opcode(`OP_ADD), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd6),
-              .expected_reg_b(8'd5), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // ADD: unused bits are all 1s
-    // Decoder should ignore bits [2:0]
-    test_case(.test_number(22), .tc_instruction_data(16'b0010_001_010_011_111),
-              .expected_opcode(`OP_ADD), .expected_dst_reg(8'd1), .expected_src_reg_a(8'd2),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // CMP: unused bits all 1s
-    test_case(.test_number(23), .tc_instruction_data(16'b1100_101_010_111111),
-              .expected_opcode(`OP_CMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd5),
-              .expected_reg_b(8'd2), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // MOV: unused bits all 1s
-    test_case(.test_number(24), .tc_instruction_data(16'b0001_111_000_111111),
-              .expected_opcode(`OP_MOV), .expected_dst_reg(8'd7), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // JMP address 0
-    test_case(.test_number(25), .tc_instruction_data(16'b1101_000_000000000),
-              .expected_opcode(`OP_JMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // JMP max address
-    test_case(.test_number(26), .tc_instruction_data(16'b1101_000_111111111),
-              .expected_opcode(`OP_JMP), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'h1FF));
-
-    // JE address 0
-    test_case(.test_number(27), .tc_instruction_data(16'b1110_000_000000000),
-              .expected_opcode(`OP_JE), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // A reserved HALT_OR_VECTOR sub-opcode has no decoded register fields.
-    test_case(.test_number(28), .tc_instruction_data(16'b1111_111111111111),
-              .expected_opcode(`OP_HALT_OR_VECTOR), .expected_dst_reg(8'd0), .expected_src_reg_a(8'd0),
-              .expected_reg_b(8'd0), .expected_immediate(16'd0), .expected_address(9'd0));
-
-    // Bit 5 distinguishes VLOAD/VSTORE from scalar LOAD/STORE.
-    test_memory_vector_flag(.test_number(29), .tc_instruction_data(16'b1010_001_010_0_00000),
-                            .expected_memory_vectorized(1'b0));
-    test_memory_vector_flag(.test_number(30), .tc_instruction_data(16'b1010_001_010_1_00000),
-                            .expected_memory_vectorized(1'b1));
-    test_memory_vector_flag(.test_number(31), .tc_instruction_data(16'b1011_001_010_1_00000),
-                            .expected_memory_vectorized(1'b1));
-
-    // VADD v3, v4, v5: sub-op=001, operand A=2, operand B=3, result=4.
-    test_case(.test_number(32), .tc_instruction_data(16'b1111_001_010_011_100),
-              .expected_opcode(`OP_HALT_OR_VECTOR), .expected_dst_reg(8'd4), .expected_src_reg_a(8'd2),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-    test_halt_or_vector_subop(.test_number(33), .tc_instruction_data(16'b1111_000_000_000_000),
-                              .expected_subop(`HALT_OR_VECTOR_SUBOP_HALT));
-    test_halt_or_vector_subop(.test_number(34), .tc_instruction_data(16'b1111_001_010_011_100),
-                              .expected_subop(`HALT_OR_VECTOR_SUBOP_VADD));
-    test_halt_or_vector_subop(.test_number(35), .tc_instruction_data(16'b1111_111_111_111_111),
-                              .expected_subop(3'b111));
-    // VDOT v3, v4, r5 uses the same operand fields, with a scalar result register.
-    test_case(.test_number(36), .tc_instruction_data(16'b1111_100_010_011_100),
-              .expected_opcode(`OP_HALT_OR_VECTOR), .expected_dst_reg(8'd4), .expected_src_reg_a(8'd2),
-              .expected_reg_b(8'd3), .expected_immediate(16'd0), .expected_address(9'd0));
-    test_halt_or_vector_subop(.test_number(37), .tc_instruction_data(16'b1111_100_010_011_100),
-                              .expected_subop(`HALT_OR_VECTOR_SUBOP_VDOT));
-
+    // Reserved fields do not alter operand fields; assemblers emit them as zero.
+    test_case(14, {`OP_MOV, 3'd2, 3'd4, 5'h1F}, `OP_MOV, 3'd2, 3'd4, 3'd0, 16'd0, 16'd0);
+    $display("decoder_tb passed");
     $finish;
   end
-
 endmodule

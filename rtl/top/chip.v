@@ -7,15 +7,15 @@ module chip (
     output halted
 );
 
-  wire cpu_in_mem_data;
-  wire cpu_out_mem_address;
-  wire cpu_out_mem_write_data;
+  wire [15:0] cpu_in_mem_data;
+  wire [15:0] cpu_out_mem_address;
+  wire [15:0] cpu_out_mem_write_data;
   wire cpu_out_mem_write_enable;
 
   cpu cpu_module (
       .clk(clk),
       .reset(reset),
-      .mem_read_data(in_cpu_mem_data),
+      .mem_read_data(cpu_in_mem_data),
       .mem_address(cpu_out_mem_address),
       .mem_write_data(cpu_out_mem_write_data),
       .mem_write_enable(cpu_out_mem_write_enable),

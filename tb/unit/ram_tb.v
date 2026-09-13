@@ -3,12 +3,12 @@
 module memory_tb;
 
   reg        clk;
-  reg [ 8:0] address;
+  reg [15:0] address;
   reg        write_enable;
   reg [15:0] write_data;
   reg [15:0] read_data;
 
-  task test_case(input [7:0] test_number, input [8:0] tc_address, input tc_write_enable,
+  task test_case(input [7:0] test_number, input [15:0] tc_address, input tc_write_enable,
                  input [15:0] tc_write_data, input [15:0] expected_read_data);
     begin
       address      = tc_address;
@@ -103,4 +103,3 @@ module memory_tb;
   end
 
 endmodule
-

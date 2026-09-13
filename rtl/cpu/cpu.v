@@ -6,7 +6,7 @@ module cpu (
     input  wire        clk,
     input  wire        reset,
     input  wire [15:0] mem_read_data,
-    output wire [ 8:0] mem_address,
+    output wire [15:0] mem_address,
     output wire [15:0] mem_write_data,
     output wire        mem_write_enable,
     output wire        halted
@@ -31,14 +31,14 @@ module cpu (
   wire        vector_store_active;
   wire        vector_alu_write_enable;
   wire [ 2:0] vector_alu_write_addr;
-  wire [ 2:0] vector_alu_operation;
+  wire [ 4:0] vector_alu_operation;
   wire [ 2:0] vector_alu_read_addr_a;
   wire [ 2:0] vector_alu_read_addr_b;
   wire        datapath_vector_dot_writeback_select;
 
-  // STORE takes its value from scalar source operand A; VSTORE takes the
-  // matching lane from its vector source. Both use scalar source operand B as
-  // their address register (truncated to the RAM's 9-bit bus in the control unit).
+  // STORE takes its value from scalar source operand A; VST takes the
+  // matching lane from its vector source. Assembly syntax places the address
+  // first, while the decoder routes it to scalar source operand B internally.
   assign mem_write_data = vector_store_active ? vector_read_data : datapath_read_data_a;
 
   control_unit control_unit_module (

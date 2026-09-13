@@ -2,15 +2,15 @@
 `include "alu.v"
 
 module vector_alu_16bit (
-    input  [ 2:0] operation,
+    input  [ 4:0] operation,
     input  [127:0] a,
     input  [127:0] b,
     output [127:0] out,
     output [15:0] dot_product
 );
   wire [3:0] scalar_alu_operation =
-      operation == `HALT_OR_VECTOR_SUBOP_VADD ? `OP_ADD :
-      operation == `HALT_OR_VECTOR_SUBOP_VSUB ? `OP_SUB : `OP_MUL;
+      operation == `OP_VADD ? `OP_ADD :
+      operation == `OP_VSUB ? `OP_SUB : `OP_MUL;
 
   wire [15:0] dot_sum_01;
   wire [15:0] dot_sum_23;

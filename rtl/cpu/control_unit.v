@@ -8,7 +8,7 @@ module control_unit (
     input [15:0] mem_read_data,
     input [15:0] datapath_read_data_a,
     input [15:0] datapath_read_data_b,
-    output [8:0] mem_addr,
+    output [15:0] mem_addr,
     output mem_write_enable,
     output datapath_write_enable,
     output datapath_writeback_select,
@@ -26,46 +26,38 @@ module control_unit (
     output        vector_store_active,
     output        vector_alu_write_enable,
     output [2:0] vector_alu_write_addr,
-    output [2:0] vector_alu_operation,
+    output [4:0] vector_alu_operation,
     output [2:0] vector_alu_read_addr_a,
     output [2:0] vector_alu_read_addr_b,
     output        datapath_vector_dot_writeback_select,
     output halted
 );
 
-  wire [ 8:0] pc;
+  wire [15:0] pc;
   wire        advance_pc;
   wire        write_enable_pc;
   reg         cmp_equal_flag;
 
   wire [ 2:0] fsm_out_state;
 
-  wire [ 3:0] decoder_out_opcode;
+  wire [ 4:0] decoder_out_opcode;
   wire [ 2:0] decoder_out_dst_reg;
   wire [ 2:0] decoder_out_src_reg_a;
   wire [ 2:0] decoder_out_src_reg_b;
   wire [15:0] decoder_out_immediate;
-  wire [ 8:0] decoder_out_address;
-  wire        decoder_out_memory_vectorized;
-  wire [ 2:0] decoder_out_halt_or_vector_subop;
-  wire        decoder_out_is_register_write_op;
+  wire [15:0] decoder_out_address;
   reg  [ 2:0] vector_lane;
 
   wire is_vector_memory_operation =
-      decoder_out_memory_vectorized &&
-      (decoder_out_opcode == `OP_LOAD || decoder_out_opcode == `OP_STORE);
+      decoder_out_opcode == `OP_VLD || decoder_out_opcode == `OP_VST;
   wire is_vector_alu_operation =
-      decoder_out_opcode == `OP_HALT_OR_VECTOR &&
-      (decoder_out_halt_or_vector_subop == `HALT_OR_VECTOR_SUBOP_VADD ||
-       decoder_out_halt_or_vector_subop == `HALT_OR_VECTOR_SUBOP_VSUB ||
-       decoder_out_halt_or_vector_subop == `HALT_OR_VECTOR_SUBOP_VMUL);
-  wire is_vector_dot_operation =
-      decoder_out_opcode == `OP_HALT_OR_VECTOR &&
-      decoder_out_halt_or_vector_subop == `HALT_OR_VECTOR_SUBOP_VDOT;
+      decoder_out_opcode == `OP_VADD || decoder_out_opcode == `OP_VSUB ||
+      decoder_out_opcode == `OP_VMUL;
+  wire is_vector_dot_operation = decoder_out_opcode == `OP_VDOT;
   wire vector_memory_complete =
       !is_vector_memory_operation || vector_lane == 3'd7;
-  wire [8:0] vector_memory_address =
-      datapath_read_data_b[8:0] + {6'b000000, vector_lane};
+  wire [15:0] vector_memory_address =
+      datapath_read_data_b + {13'b0, vector_lane};
 
   wire [15:0] ir;
 
@@ -85,9 +77,7 @@ module control_unit (
       .src_reg_a       (decoder_out_src_reg_a),
       .src_reg_b       (decoder_out_src_reg_b),
       .immediate       (decoder_out_immediate),
-      .address         (decoder_out_address),
-      .memory_vectorized(decoder_out_memory_vectorized),
-      .halt_or_vector_subop(decoder_out_halt_or_vector_subop)
+      .address         (decoder_out_address)
   );
 
   program_counter pc_module (
@@ -104,7 +94,6 @@ module control_unit (
       .reset (reset),
       .opcode(decoder_out_opcode),
       .memory_complete(vector_memory_complete),
-      .halt_or_vector_subop(decoder_out_halt_or_vector_subop),
       .state(fsm_out_state)
   );
 
@@ -127,18 +116,20 @@ module control_unit (
       cmp_equal_flag <= datapath_read_data_a == datapath_read_data_b;
   end
 
-  function is_execute_register_write_op(input [3:0] opcode);
+  function is_execute_register_write_op(input [4:0] opcode);
     begin
       case (opcode)
         `OP_LDI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_SHL, `OP_SHR, `OP_MUL, `OP_AND, `OP_OR, `OP_XOR:
         is_execute_register_write_op = 1'b1;
-        `OP_LOAD, `OP_STORE, `OP_CMP, `OP_JMP, `OP_JE, `OP_HALT_OR_VECTOR:
+        `OP_LOAD, `OP_STORE, `OP_CMP, `OP_JMP, `OP_JE, `OP_HALT,
+        `OP_VLD, `OP_VST, `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT:
         is_execute_register_write_op = 1'b0;
+        default: is_execute_register_write_op = 1'b0;
       endcase
     end
   endfunction
 
-  function is_immediate_writeback_op(input [3:0] opcode);
+  function is_immediate_writeback_op(input [4:0] opcode);
     begin
       if (opcode == `OP_LOAD || opcode == `OP_LDI)
         is_immediate_writeback_op = 1'b1;
@@ -147,22 +138,22 @@ module control_unit (
   endfunction
 
   assign datapath_immediate =
-      (decoder_out_opcode == `OP_LOAD && !decoder_out_memory_vectorized &&
+      (decoder_out_opcode == `OP_LOAD &&
        fsm_out_state == `FSM_MEMORY) ? mem_read_data : decoder_out_immediate;
 
   // Normal writeback happens at the end of EXECUTE; LOAD writes back at the end of MEMORY.
   assign datapath_write_enable =
       (fsm_out_state == `FSM_EXECUTE && is_execute_register_write_op(decoder_out_opcode)) ||
       (fsm_out_state == `FSM_EXECUTE && is_vector_dot_operation) ||
-      (fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD &&
-       !decoder_out_memory_vectorized);
+      (fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD);
 
-  // LOAD and STORE use the low nine bits of their scalar address-register operand.
-  // VLOAD and VSTORE add the active lane number to form each consecutive address.
+  // Register-held addresses are 16 bits. VLD and VST add the active lane number
+  // to form each consecutive word address.
   assign mem_addr =
       fsm_out_state == `FSM_FETCH_DECODE ? pc :
-      (decoder_out_opcode == `OP_LOAD || decoder_out_opcode == `OP_STORE ?
-       (is_vector_memory_operation ? vector_memory_address : datapath_read_data_b[8:0]) :
+      (decoder_out_opcode == `OP_LOAD || decoder_out_opcode == `OP_STORE ||
+       decoder_out_opcode == `OP_VLD || decoder_out_opcode == `OP_VST ?
+       (is_vector_memory_operation ? vector_memory_address : datapath_read_data_b) :
        decoder_out_address);
 
   // The PC advances when the current instruction completes execution.
@@ -173,11 +164,11 @@ module control_unit (
       (decoder_out_opcode == `OP_JMP ||
        (decoder_out_opcode == `OP_JE && cmp_equal_flag));
 
-  assign mem_write_enable = fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_STORE;
+  assign mem_write_enable = fsm_out_state == `FSM_MEMORY &&
+      (decoder_out_opcode == `OP_STORE || decoder_out_opcode == `OP_VST);
 
   assign vector_write_enable =
-      fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD &&
-      decoder_out_memory_vectorized;
+      fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_VLD;
   assign vector_write_addr = decoder_out_dst_reg;
   assign vector_write_lane = vector_lane;
   assign vector_write_data = mem_read_data;
@@ -185,13 +176,12 @@ module control_unit (
   assign vector_read_addr = decoder_out_src_reg_a;
   assign vector_read_lane = vector_lane;
   assign vector_store_active =
-      fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_STORE &&
-      decoder_out_memory_vectorized;
+      fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_VST;
 
   assign vector_alu_write_enable =
       fsm_out_state == `FSM_EXECUTE && is_vector_alu_operation;
   assign vector_alu_write_addr = decoder_out_dst_reg;
-  assign vector_alu_operation = decoder_out_halt_or_vector_subop;
+  assign vector_alu_operation = decoder_out_opcode;
   assign vector_alu_read_addr_a = decoder_out_src_reg_a;
   assign vector_alu_read_addr_b = decoder_out_src_reg_b;
   assign datapath_vector_dot_writeback_select =
@@ -203,11 +193,11 @@ module control_unit (
 
   assign datapath_dst_reg = decoder_out_dst_reg;
 
-  assign halted = fsm_out_state == `FSM_HALT_OR_VECTOR;
+  assign halted = fsm_out_state == `FSM_HALT;
 
   assign datapath_writeback_select =
-      is_immediate_writeback_op(decoder_out_opcode) && !decoder_out_memory_vectorized;
+      is_immediate_writeback_op(decoder_out_opcode);
 
-  assign alu_op = decoder_out_opcode;
+  assign alu_op = decoder_out_opcode[3:0];
 
 endmodule

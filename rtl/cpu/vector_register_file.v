@@ -3,7 +3,7 @@
 
 `include "register.v"
 
-// Eight vector registers, each containing eight 16-bit lanes. VLOAD writes one
+// Eight vector registers, each containing eight 16-bit lanes. VLD writes one
 // selected lane per memory phase; vector ALU instructions write every lane of a
 // selected result register in their execute phase.
 module vector_register_file (

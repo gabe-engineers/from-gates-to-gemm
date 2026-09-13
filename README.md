@@ -1,151 +1,94 @@
-# Specs
+# From Gates to GEMM
 
-Supports 9 bits for addressing memory. Word addressable only (not byte addressable), word size is 16 bits.
- 
-Scalar register file: 8 16-bit registers (`r1` through `r8`).
+This project implements a multi-cycle 16-bit scalar and SIMD processor in Verilog.
 
-Vector register file: 8 vector registers (`v1` through `v8`), each with 8 lanes of 16-bit values.
+## Machine organization
+
+- Instructions and words are 16 bits.
+- Scalar register file: eight 16-bit registers, named `r1` through `r8`.
+- Vector register file: eight registers, named `v1` through `v8`, with eight
+  16-bit lanes per register.
+- Memory is word-addressed.
+- The PC and register-held memory addresses are 16 bits.
+- The supplied RAM contains 512 words. Access outside the installed RAM range is
+  undefined behavior; architectural address width and physical RAM capacity are
+  intentionally separate.
 
 ## Simulation
 
-Install [Icarus Verilog](https://steveicarus.github.io/iverilog/) and
-[just](https://just.systems/), then run:
+Install Icarus Verilog and `just`, then run:
 
 ```sh
-just test cpu_tb  # Run one testbench.
-just test-assembler  # Run assembler unit and CPU-integration tests.
-just test-all     # Run every testbench.
-just clean        # Remove generated build artifacts.
+just test cpu_tb       # Run one testbench.
+just test-assembler   # Run assembler and assembler/CPU tests.
+just test-all         # Run every testbench.
+just clean
 ```
 
-Simulation executables are written to `build/sim/`, which is ignored by Git.
+Simulation output is written beneath `build/sim/`.
 
-## Project Layout
+## Execution timing
 
-- `rtl/include/` — shared ISA, ALU, and FSM definitions.
-- `rtl/lib/` — reusable primitives such as gates, adders, and registers.
-- `rtl/cpu/` — CPU, datapath, ALU, decoder, control, and register-file RTL.
-- `rtl/memory/` — RAM RTL.
-- `rtl/top/` — chip-level integration RTL.
-- `tb/unit/` — focused module testbenches.
-- `tb/integration/` — datapath and CPU integration testbenches.
-- `build/sim/` — generated simulation artifacts; ignored by Git.
+The CPU uses a multi-cycle design:
 
-## Execution Timing
+1. **FETCH/DECODE** captures the memory word in the instruction register.
+2. **EXECUTE** performs scalar/vector ALU work and register writeback.
+3. **MEMORY** performs scalar transfers in one cycle. `VLD` and `VST` use eight
+   memory cycles, one per vector lane.
 
-The CPU uses a multi-cycle design with a combined fetch/decode phase rather than a separate
-decode state:
+`HALT` stops instruction execution without clearing registers. Reset clears the
+PC, scalar registers, vector registers, and equality flag and resumes fetching.
 
-1. **FETCH/DECODE** — The program counter addresses instruction memory. On the rising clock
-   edge, the fetched instruction is captured in the instruction register (IR), and its fields are
-   decoded combinationally.
-2. **EXECUTE** — The stable decoded controls drive the datapath. Register-file writeback occurs
-   on the following rising edge.
-3. **MEMORY** — Scalar `LOAD` and `STORE` use one additional memory phase. `VLOAD` and
-   `VSTORE` use eight consecutive memory phases, one per vector lane, before returning to fetch.
-   `VADD`, `VSUB`, `VMUL`, and `VDOT` execute in the normal execute phase.
+## Instruction set
 
-Capturing the IR and writing the register file on separate edges avoids a write dependency: a
-register file must not act on an instruction that is being written into the IR on that same edge.
+| Opcode | Assembly | Behavior |
+| --- | --- | --- |
+| `0x00` | `LDI rd imm8` | Zero-extend an unsigned 8-bit immediate |
+| `0x01` | `MOV rd rs` | Copy a scalar register |
+| `0x02` | `ADD rd ra rb` | Add |
+| `0x03` | `SUB rd ra rb` | Subtract |
+| `0x04` | `AND rd ra rb` | Bitwise AND |
+| `0x05` | `OR rd ra rb` | Bitwise OR |
+| `0x06` | `XOR rd ra rb` | Bitwise XOR |
+| `0x07` | `SHL rd ra rb` | Logical left shift |
+| `0x08` | `SHR rd ra rb` | Logical right shift |
+| `0x09` | `MUL rd ra rb` | Multiply |
+| `0x0A` | `LOAD rd raddr` | Load one word |
+| `0x0B` | `STORE raddr rs` | Store one word; address operand comes first |
+| `0x0C` | `CMP ra rb` | Set the equality flag |
+| `0x0D` | `JMP addr11` | Absolute jump to a zero-extended 11-bit address |
+| `0x0E` | `JE addr11` | Jump when the equality flag is set (`JZ` is an alias) |
+| `0x0F` | `HALT` | Stop without clearing registers |
+| `0x10` | `VLD vd raddr` | Load eight consecutive words |
+| `0x11` | `VST raddr vs` | Store eight consecutive words; address first |
+| `0x12` | `VADD vd va vb` | Lane-wise addition |
+| `0x13` | `VSUB vd va vb` | Lane-wise subtraction |
+| `0x14` | `VMUL vd va vb` | Lane-wise multiplication |
+| `0x15` | `VDOT rd va vb` | Dot product into a scalar register |
+| `0x16–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
-# Instruction Set Architecture
+`GLAUNCH`, `GWAIT`, `TID`, and `LUI` are intentionally not implemented yet.
+Unsupported opcodes stop the current CPU implementation without side effects.
 
-- LDI rd immediate
-- LOAD rd ra
-- STORE rs ra
-- VLOAD vd ra
-- VSTORE vs ra
-- VADD va vb vd
-- VSUB va vb vd
-- VMUL va vb vd
-- VDOT va vb rd
-- ADD rd r1 r2
-- SUB rd r1 r2
-- SHL rd r1 r2
-- SHR rd r1 r2
-- MUL rd r1 r2
-- AND rd r1 r2
-- OR rd r1 r2
-- XOR rd r1 r2
-- CMP r1 r2
-- MOV rd r1
-- JMP addr
-- JE addr
-- HALT_OR_VECTOR
+Arithmetic, multiplication, and `VDOT` retain the low 16 bits. Logical shifts
+by 16 or more produce zero. Only `CMP` changes the equality flag.
 
-`CMP` stores whether its two operands are equal in a control-unit flag. `JE` writes its target to
-the program counter only when that flag is set; `JMP` always writes its target.
+Because `LUI` is deferred, immediate constants above 255 must currently be
+computed with scalar instructions or loaded from memory.
 
+## Encoding
 
-## Instruction Format
+All reserved bits must be zero in assembler output.
 
-Every instruction is 16-bits wide. The first 4 bits are always the Opcode, the rest of the bits are interpreted based on the Opcode and can be of 5 different types.
+| Format | Bits, most significant first |
+| --- | --- |
+| Three registers | `opcode[5] A[3] B[3] C[3] reserved[2]` |
+| Two registers | `opcode[5] A[3] B[3] reserved[5]` |
+| One register | `opcode[5] A[3] reserved[8]` |
+| Immediate | `opcode[5] rd[3] immediate[8]` |
+| Jump | `opcode[5] address[11]` |
+| No operands | `opcode[5] reserved[11]` |
 
-### Register-Indirect Memory Operations
-
-`LOAD rd ra` and `STORE rs ra` use a scalar register as the memory address. `rd` is the
-load destination, `rs` is the value to store, and `ra` is the address register. `VLOAD vd ra`
-and `VSTORE vs ra` use the same opcodes with the vector flag set; `vd`/`vs` select one of eight
-vector registers (`v1` through `v8`) while `ra` remains a scalar address register.
-
-Each vector register has eight 16-bit lanes. A vector transfer uses eight consecutive,
-word-addressed locations: lane 0 uses `ra[8:0]`, lane 1 uses `ra[8:0] + 1`, and so on through
-lane 7. Addresses wrap modulo 512. Bit 5 is the vector flag; bits 4:0 remain reserved and the
-assembler emits them as zero.
-
-
-| Bits           | 15:12  | 11:9                                      | 8:6                     | 5           | 4:0      |
-| -------------- | ------ | ----------------------------------------- | ----------------------- | ----------- | -------- |
-| Interpretation | Opcode | Scalar/vector load destination or store value | Scalar address register | Vector flag | Reserved |
-
-
-### HALT-or-Vector Operations
-
-Opcode `1111` uses its remaining twelve bits as a vector-operation format. Sub-opcode `000`
-is `HALT_OR_VECTOR`; the vector instructions use `001` for `VADD`, `010` for `VSUB`, `011`
-for `VMUL`, and `100` for `VDOT`. The remaining sub-opcodes are reserved and halt the processor.
-`VADD`, `VSUB`, and `VMUL` are lane-wise: for every lane `i` from 0 through 7,
-`vd[i] = va[i] op vb[i]`. `VDOT va vb rd` multiplies corresponding lanes, sums the eight
-products, and writes the low 16 bits of the sum to scalar register `rd`. Assembly operands are
-written in field order: `VADD va vb vd` and `VDOT va vb rd`.
-
-| Bits           | 15:12 | 11:9       | 8:6              | 5:3              | 2:0             |
-| -------------- | ----- | ---------- | ---------------- | ---------------- | --------------- |
-| Interpretation | Opcode | Sub-opcode | Vector operand A | Vector operand B | Result register (vector for VADD/VSUB/VMUL; scalar for VDOT) |
-
-
-### 3 Register Operations
-
-Instructions like ADD, SUB, SHL, SHR, MUL, AND, OR and XOR us this instruction format.
-
-
-| Bits           | 15:12  | 11:9     | 8:6            | 5:3 | 2:0 |
-| -------------- | ------ | -------- | -------------- | ---- | ----|
-| Interpretation | Opcode | Destination Register | Operand register 1 | Operand register 2 | Unused |
-
-
-### 2 Register Operations
-
-Instructions like CMP and MOV use two registers as input.
-
-| Bits           | 15:12  | 11:9     | 8:6            | 5: 0 |
-| -------------- | ------ | -------- | -------------- | ---- |
-| Interpretation | Opcode | Operand register 1 | Operand register 2 | Unused |
-
-
-### 1 Memory Address
-
-Instructions like JMP and JE use only 1 memory address as input.
-
-| Bits           | 15:12  | 11:0 |
-| -------------- | ------ | -------- |
-| Interpretation | Opcode | Memory Address |
-
-### 1 Register and 1 immediate
-
-LDI uses the 1 register and 1 immediate format.
-
-
-| Bits           | 15:12  | 11:9                 | 8:0       |
-| -------------- | ------ | -------------------- | --------- |
-| Interpretation | Opcode | Destination register | Immediate |
+Registers use zero-based three-bit encodings internally: assembly register `r1`
+or `v1` is encoded as zero, and `r8` or `v8` is encoded as seven. Operands occupy
+fields in assembly order, including address-first stores.

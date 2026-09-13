@@ -25,7 +25,7 @@ module datapath_16bit (
     output [15:0] vector_read_data,
     input         vector_alu_write_enable,
     input  [ 2:0] vector_alu_write_addr,
-    input  [ 2:0] vector_alu_operation,
+    input  [ 4:0] vector_alu_operation,
     input  [ 2:0] vector_alu_read_addr_a,
     input  [ 2:0] vector_alu_read_addr_b,
     input         vector_dot_writeback_select

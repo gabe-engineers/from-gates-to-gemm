@@ -2,7 +2,7 @@
 
 module memory (
   input         clk,
-  input  [ 8:0] address,
+  input  [15:0] address,
   input         write_enable,
   input  [15:0] write_data,
   output [15:0] read_data
@@ -10,6 +10,7 @@ module memory (
 
   wire [15:0] register_out[0:511];
 
+  // Access outside the implemented 512-word RAM is architecturally undefined.
   assign read_data = register_out[address];
 
   genvar i;

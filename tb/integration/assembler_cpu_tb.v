@@ -8,7 +8,7 @@ module assembler_cpu_tb;
   reg         reset;
   reg  [15:0] memory [0:511];
   wire [15:0] mem_read_data;
-  wire [ 8:0] mem_address;
+  wire [15:0] mem_address;
   wire [15:0] mem_write_data;
   wire        mem_write_enable;
   wire        halted;
@@ -75,13 +75,8 @@ module assembler_cpu_tb;
     if (!halted)
       $fatal(1, "assembler program did not halt within %0d cycles", cycles);
 
-    // ldi r1 7; ldi r2 5; add r3 r1 r2; ldi r4 400; store r3 r4;
-    // load r5 r4; ldi r6 401; store r5 r6; ldi r7 100; vload v1 r7;
-    // ldi r6 402; store r1 r6; ldi r7 110; vload v2 r7;
-    // vadd v1 v2 v3; vsub v1 v2 v4; vmul v1 v2 v5; vdot v1 v2 r3;
-    // ldi r6 403; store r3 r6;
-    // ldi r7 200; vstore v1 r7; ldi r7 300; vstore v3 r7;
-    // ldi r7 310; vstore v4 r7; ldi r7 320; vstore v5 r7; halt_or_vector
+    // The assembler test builds addresses above 255 with scalar arithmetic,
+    // then exercises scalar memory, all vector operations, and HALT.
     if (memory[400] !== 16'd12)
       $fatal(1, "assembled program stored %0d at address 400; expected 12", memory[400]);
 
@@ -89,7 +84,7 @@ module assembler_cpu_tb;
       $fatal(1, "assembled program loaded/stored %0d at address 401; expected 12", memory[401]);
 
     if (memory[402] !== 16'd7)
-      $fatal(1, "VLOAD unexpectedly changed scalar r1 to %0d", memory[402]);
+      $fatal(1, "VLD unexpectedly changed scalar r1 to %0d", memory[402]);
 
     if (memory[403] !== 16'd2040)
       $fatal(1, "VDOT stored %0d at address 403; expected 2040", memory[403]);
@@ -98,7 +93,9 @@ module assembler_cpu_tb;
         memory[202] !== 16'd30 || memory[203] !== 16'd40 ||
         memory[204] !== 16'd50 || memory[205] !== 16'd60 ||
         memory[206] !== 16'd70 || memory[207] !== 16'd80)
-      $fatal(1, "VLOAD/VSTORE did not preserve all eight vector lanes");
+      $fatal(1, "VLD/VST lanes: %0d %0d %0d %0d %0d %0d %0d %0d",
+             memory[200], memory[201], memory[202], memory[203],
+             memory[204], memory[205], memory[206], memory[207]);
 
     if (memory[300] !== 16'd11 || memory[301] !== 16'd22 ||
         memory[302] !== 16'd33 || memory[303] !== 16'd44 ||
