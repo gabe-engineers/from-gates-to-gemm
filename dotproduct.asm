@@ -31,7 +31,7 @@ ADD r7 r8
 ADD r1 r4 r1 # Increment offsets
 ADD r2 r4 r2
 JMP 25
-HALT
+HALT_OR_VECTOR
 
 
 

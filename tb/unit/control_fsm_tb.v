@@ -4,13 +4,17 @@ module control_fsm_tb;
   reg        clk;
   reg        reset;
   reg  [3:0] opcode;
+  reg        memory_complete;
+  reg  [2:0] halt_or_vector_subop;
   wire [2:0] state;
 
   control_fsm dut (
-    clk,
-    reset,
-    opcode,
-    state
+    .clk            (clk),
+    .reset          (reset),
+    .opcode         (opcode),
+    .memory_complete(memory_complete),
+    .halt_or_vector_subop(halt_or_vector_subop),
+    .state          (state)
   );
 
   task test_case(input [7:0] test_number, input tc_reset, input [3:0] tc_opcode,
@@ -18,6 +22,8 @@ module control_fsm_tb;
     begin
       reset  = tc_reset;
       opcode = tc_opcode;
+      memory_complete = 1'b1;
+      halt_or_vector_subop = `HALT_OR_VECTOR_SUBOP_HALT;
       clk    = 0;
       #10;
       clk = 1;
@@ -65,10 +71,75 @@ module control_fsm_tb;
     test_case(.test_number(31), .tc_reset(0), .tc_opcode(`OP_STORE), .expected_state(`FSM_MEMORY));
     test_case(.test_number(32), .tc_reset(0), .tc_opcode(`OP_STORE), .expected_state(`FSM_FETCH_DECODE));
 
-    test_case(.test_number(33), .tc_reset(0), .tc_opcode(`OP_HALT), .expected_state(`FSM_EXECUTE));
-    test_case(.test_number(34), .tc_reset(0), .tc_opcode(`OP_HALT), .expected_state(`FSM_HALT));
-    test_case(.test_number(35), .tc_reset(0), .tc_opcode(`OP_ADD), .expected_state(`FSM_HALT));
+    test_case(.test_number(33), .tc_reset(0), .tc_opcode(`OP_HALT_OR_VECTOR), .expected_state(`FSM_EXECUTE));
+    test_case(.test_number(34), .tc_reset(0), .tc_opcode(`OP_HALT_OR_VECTOR), .expected_state(`FSM_HALT_OR_VECTOR));
+    test_case(.test_number(35), .tc_reset(0), .tc_opcode(`OP_ADD), .expected_state(`FSM_HALT_OR_VECTOR));
     test_case(.test_number(36), .tc_reset(1), .tc_opcode(`OP_ADD), .expected_state(`FSM_FETCH_DECODE));
+
+    // A vector memory transfer holds the FSM in MEMORY until the final lane completes.
+    reset = 1'b0;
+    opcode = `OP_LOAD;
+    memory_complete = 1'b1;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_MEMORY)
+      $fatal(1, "LOAD did not enter the MEMORY state");
+
+    memory_complete = 1'b0;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_MEMORY)
+      $fatal(1, "FSM left MEMORY before the vector transfer completed");
+
+    memory_complete = 1'b1;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_FETCH_DECODE)
+      $fatal(1, "FSM did not leave MEMORY after the vector transfer completed");
+
+    // A supported vector ALU sub-op executes and returns to fetch instead of halting.
+    reset = 1'b0;
+    opcode = `OP_HALT_OR_VECTOR;
+    memory_complete = 1'b1;
+    halt_or_vector_subop = `HALT_OR_VECTOR_SUBOP_VADD;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_EXECUTE)
+      $fatal(1, "VADD did not enter EXECUTE");
+
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_FETCH_DECODE)
+      $fatal(1, "VADD did not return to FETCH/DECODE");
+
+    halt_or_vector_subop = `HALT_OR_VECTOR_SUBOP_VDOT;
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_EXECUTE)
+      $fatal(1, "VDOT did not enter EXECUTE");
+
+    clk = 1'b0;
+    #10;
+    clk = 1'b1;
+    #10;
+    if (state !== `FSM_FETCH_DECODE)
+      $fatal(1, "VDOT did not return to FETCH/DECODE");
 
     $finish;
   end

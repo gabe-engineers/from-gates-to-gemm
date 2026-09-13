@@ -546,8 +546,8 @@ module cpu_tb;
     // A taken JE must support the maximum representable 9-bit target.
     test_jump_equal(.test_number(64), .tc_address(9'd511), .tc_expected_taken(1'b1));
 
-    test_case(.test_number(65), .tc_reset(1'b0), .tc_instruction({`OP_HALT, 12'b0}),
-              .tc_load_data(16'b0), .tc_evaluation_state(`FSM_HALT),
+    test_case(.test_number(65), .tc_reset(1'b0), .tc_instruction({`OP_HALT_OR_VECTOR, 12'b0}),
+              .tc_load_data(16'b0), .tc_evaluation_state(`FSM_HALT_OR_VECTOR),
               .expected_mem_write_enable(1'b0), .expected_mem_address(9'b0),
               .expected_mem_write_data(16'b0), .expected_halted(1'b1));
 

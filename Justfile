@@ -31,6 +31,8 @@ test-all:
     just test program_counter_tb
     just test ram_tb
     just test register_file_tb
+    just test vector_alu_tb
+    just test vector_register_file_tb
     just test register_tb
 
 test-assembler:

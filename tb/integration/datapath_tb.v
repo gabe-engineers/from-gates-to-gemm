@@ -26,7 +26,8 @@ module datapath_16bit_tb;
       .read_addr_a     (read_addr_a),
       .read_addr_b     (read_addr_b),
       .write_addr      (write_addr),
-      .write_reg_data  (write_reg_data)
+      .write_reg_data  (write_reg_data),
+      .vector_dot_writeback_select(1'b0)
   );
 
   task test_case(input [15:0] test_number, input tc_reset, input tc_write_enable,

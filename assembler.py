@@ -8,10 +8,18 @@ from pathlib import Path
 
 MAX_PROGRAM_INSTRUCTIONS = 512
 MAX_NINE_BIT_VALUE = 0x1FF
+MEMORY_VECTOR_FLAG_BIT = 5
+MEMORY_VECTOR_FLAG = 1 << MEMORY_VECTOR_FLAG_BIT
+HALT_OR_VECTOR_SUBOP_HALT = 0b000
+HALT_OR_VECTOR_SUBOP_VADD = 0b001
+HALT_OR_VECTOR_SUBOP_VSUB = 0b010
+HALT_OR_VECTOR_SUBOP_VMUL = 0b011
+HALT_OR_VECTOR_SUBOP_VDOT = 0b100
 
 
 class OperandType(Enum):
     REGISTER = "REGISTER"
+    VECTOR_REGISTER = "VECTOR_REGISTER"
     IMMEDIATE = "IMMEDIATE"
     ADDRESS = "ADDRESS"
 
@@ -27,6 +35,7 @@ class Operand:
 class InstructionDescriptor:
     opcode: int
     operands: list[Operand]
+    fixed_bits: int = 0
 
     def encode(self, operands: list[int]) -> int:
         if len(operands) != len(self.operands):
@@ -35,11 +44,15 @@ class InstructionDescriptor:
                 f"found {len(operands)}"
             )
 
-        encoded_instruction = self.opcode << 12
+        encoded_instruction = (self.opcode << 12) | self.fixed_bits
 
         for operand in self.operands:
             value = operands[operand.order_position]
-            max_value = 0b111 if operand.type == OperandType.REGISTER else MAX_NINE_BIT_VALUE
+            max_value = (
+                0b111
+                if operand.type in (OperandType.REGISTER, OperandType.VECTOR_REGISTER)
+                else MAX_NINE_BIT_VALUE
+            )
             if not 0 <= value <= max_value:
                 raise ValueError(f"operand value {value} does not fit its instruction field")
             encoded_instruction |= (
@@ -275,6 +288,122 @@ class Assembler:
                     ),
                 ],
             ),
+            "vload": InstructionDescriptor(
+                opcode=0b1010,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=9,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=6,
+                        type=OperandType.REGISTER,
+                    ),
+                ],
+                fixed_bits=MEMORY_VECTOR_FLAG,
+            ),
+            "vstore": InstructionDescriptor(
+                opcode=0b1011,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=9,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=6,
+                        type=OperandType.REGISTER,
+                    ),
+                ],
+                fixed_bits=MEMORY_VECTOR_FLAG,
+            ),
+            "vadd": InstructionDescriptor(
+                opcode=0b1111,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=6,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=3,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=2,
+                        bit_offset=0,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                ],
+                fixed_bits=HALT_OR_VECTOR_SUBOP_VADD << 9,
+            ),
+            "vsub": InstructionDescriptor(
+                opcode=0b1111,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=6,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=3,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=2,
+                        bit_offset=0,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                ],
+                fixed_bits=HALT_OR_VECTOR_SUBOP_VSUB << 9,
+            ),
+            "vmul": InstructionDescriptor(
+                opcode=0b1111,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=6,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=3,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=2,
+                        bit_offset=0,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                ],
+                fixed_bits=HALT_OR_VECTOR_SUBOP_VMUL << 9,
+            ),
+            "vdot": InstructionDescriptor(
+                opcode=0b1111,
+                operands=[
+                    Operand(
+                        order_position=0,
+                        bit_offset=6,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=1,
+                        bit_offset=3,
+                        type=OperandType.VECTOR_REGISTER,
+                    ),
+                    Operand(
+                        order_position=2,
+                        bit_offset=0,
+                        type=OperandType.REGISTER,
+                    ),
+                ],
+                fixed_bits=HALT_OR_VECTOR_SUBOP_VDOT << 9,
+            ),
             "cmp": InstructionDescriptor(
                 opcode=0b1100,
                 operands=[
@@ -310,7 +439,7 @@ class Assembler:
                     )
                 ],
             ),
-            "halt": InstructionDescriptor(
+            "halt_or_vector": InstructionDescriptor(
                 opcode=0b1111,
                 operands=[],
             ),
@@ -331,11 +460,14 @@ class Assembler:
 
         parsed_operands = []
         for operand, token in zip(descriptor.operands, operands):
-            if operand.type == OperandType.REGISTER:
-                match = re.fullmatch(r"r([1-8])", token, re.IGNORECASE)
+            if operand.type in (OperandType.REGISTER, OperandType.VECTOR_REGISTER):
+                register_prefix = "r" if operand.type == OperandType.REGISTER else "v"
+                register_kind = "register" if operand.type == OperandType.REGISTER else "vector register"
+                match = re.fullmatch(rf"{register_prefix}([1-8])", token, re.IGNORECASE)
                 if not match:
                     raise Exception(
-                        f"line {line_num}: register {token} is outside the supported range r1-r8"
+                        f"line {line_num}: {register_kind} {token} is outside the supported range "
+                        f"{register_prefix}1-{register_prefix}8"
                     )
 
                 # The source names are one-based, while the 3-bit register fields are zero-based.
@@ -365,7 +497,7 @@ class Assembler:
                 temp_file_path = Path(target_file.name)
                 instruction_count = 0
                 for line_num, line in enumerate(f, start=1):
-                    tokens = line.split()
+                    tokens = line.split("#", 1)[0].split()
                     if not tokens:
                         continue
                     mnemonic, *operands = tokens

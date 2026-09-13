@@ -7,7 +7,9 @@ module decoder (
   output reg [ 2:0] src_reg_a,
   output reg [ 2:0] src_reg_b,
   output reg [15:0] immediate,
-  output reg [ 8:0] address
+  output reg [ 8:0] address,
+  output reg        memory_vectorized,
+  output reg [ 2:0] halt_or_vector_subop
 );
   assign opcode               = instruction_data[15:12];
 
@@ -17,6 +19,8 @@ module decoder (
     src_reg_b = 3'b000;
     immediate = 16'b0;
     address   = 9'b0;
+    memory_vectorized = 1'b0;
+    halt_or_vector_subop = `HALT_OR_VECTOR_SUBOP_HALT;
 
 
     case (opcode)
@@ -29,11 +33,13 @@ module decoder (
       `OP_LOAD: begin
         dst_reg = instruction_data[11:9];
         src_reg_b = instruction_data[8:6];
+        memory_vectorized = instruction_data[`MEMORY_VECTOR_FLAG_BIT];
       end
 
       `OP_STORE: begin
         src_reg_a = instruction_data[11:9];
         src_reg_b = instruction_data[8:6];
+        memory_vectorized = instruction_data[`MEMORY_VECTOR_FLAG_BIT];
       end
 
       `OP_CMP: begin
@@ -53,6 +59,20 @@ module decoder (
 
       `OP_JMP, `OP_JE: begin
         address = instruction_data[11:0];
+      end
+
+      `OP_HALT_OR_VECTOR: begin
+        halt_or_vector_subop = instruction_data[11:9];
+        case (instruction_data[11:9])
+          `HALT_OR_VECTOR_SUBOP_VADD,
+          `HALT_OR_VECTOR_SUBOP_VSUB,
+          `HALT_OR_VECTOR_SUBOP_VMUL,
+          `HALT_OR_VECTOR_SUBOP_VDOT: begin
+            src_reg_a = instruction_data[8:6];
+            src_reg_b = instruction_data[5:3];
+            dst_reg   = instruction_data[2:0];
+          end
+        endcase
       end
     endcase
   end

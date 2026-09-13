@@ -1,3 +1,6 @@
+`ifndef ALU_V
+`define ALU_V
+
 `include "adder.v"
 `include "alu_ops.vh"
 
@@ -62,3 +65,5 @@ module subtracter_16bit (
   );
 
 endmodule
+
+`endif

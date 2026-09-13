@@ -32,10 +32,16 @@ VALID_INSTRUCTION_CASES = (
     ("mul r1 r8 r7", "91F0", (0x9, 0x0, 0x7, 0x6, 0x000, 0x000)),
     ("load r8 r7", "AF80", (0xA, 0x7, 0x0, 0x6, 0x000, 0x000)),
     ("store r8 r1", "BE00", (0xB, 0x0, 0x7, 0x0, 0x000, 0x000)),
+    ("vload v8 r7", "AFA0", (0xA, 0x7, 0x0, 0x6, 0x000, 0x000)),
+    ("vstore v8 r1", "BE20", (0xB, 0x0, 0x7, 0x0, 0x000, 0x000)),
+    ("vadd v8 v7 v6", "F3F5", (0xF, 0x5, 0x7, 0x6, 0x000, 0x000)),
+    ("vsub v7 v6 v5", "F5AC", (0xF, 0x4, 0x6, 0x5, 0x000, 0x000)),
+    ("vmul v1 v8 v7", "F63E", (0xF, 0x6, 0x0, 0x7, 0x000, 0x000)),
+    ("vdot v8 v7 r6", "F9F5", (0xF, 0x5, 0x7, 0x6, 0x000, 0x000)),
     ("cmp r8 r1", "CE00", (0xC, 0x0, 0x7, 0x0, 0x000, 0x000)),
     ("jmp 511", "D1FF", (0xD, 0x0, 0x0, 0x0, 0x000, 0x1FF)),
     ("je 0", "E000", (0xE, 0x0, 0x0, 0x0, 0x000, 0x000)),
-    ("halt", "F000", (0xF, 0x0, 0x0, 0x0, 0x000, 0x000)),
+    ("halt_or_vector", "F000", (0xF, 0x0, 0x0, 0x0, 0x000, 0x000)),
 )
 
 
@@ -66,6 +72,10 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         immediate = word & 0x1FF
     elif opcode in (0xD, 0xE):
         address = word & 0x1FF
+    elif opcode == 0xF and ((word >> 9) & 0x7) in (0x1, 0x2, 0x3, 0x4):
+        dst_reg = word & 0x7
+        src_reg_a = (word >> 6) & 0x7
+        src_reg_b = (word >> 3) & 0x7
 
     return opcode, dst_reg, src_reg_a, src_reg_b, immediate, address
 
@@ -139,18 +149,29 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
         words = self.assemble(
             " \t  ldi\t r1   7 \t \n"
             "  add  r2\t r1    r1\t\n"
-            "\t halt \t  \n"
+            "\t halt_or_vector \t  \n"
         )
 
         self.assertEqual(words, ["0007", "2200", "F000"])
 
     def test_blank_lines_are_ignored(self) -> None:
-        words = self.assemble("\n\t  \nldi r1 7\n\n  \t\nhalt\n\n")
+        words = self.assemble("\n\t  \nldi r1 7\n\n  \t\nhalt_or_vector\n\n")
 
         self.assertEqual(words, ["0007", "F000"])
 
+    def test_hash_comments_are_ignored(self) -> None:
+        words = self.assemble(
+            "# A full-line comment\n"
+            "  # Leading whitespace before a comment is allowed\n"
+            "ldi r1 7 # An inline comment\n"
+            "add r2 r1 r1# A comment need not have leading whitespace\n"
+            "halt_or_vector # Done\n"
+        )
+
+        self.assertEqual(words, ["0007", "2200", "F000"])
+
     def test_each_nonblank_line_produces_one_word(self) -> None:
-        source = "ldi r1 1\nhalt\njmp 0\nhalt\n"
+        source = "ldi r1 1\nhalt_or_vector\njmp 0\nhalt_or_vector\n"
         words = self.assemble(source)
 
         self.assertEqual(len(words), 4)
@@ -161,7 +182,8 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "unknown mnemonic": "unknown r1 r2\n",
             "invalid character": "ldi r1 12!\n",
             "missing operand": "add r1 r2\n",
-            "extra operand": "halt r1\n",
+            "extra operand": "halt_or_vector r1\n",
+            "legacy halt mnemonic": "halt\n",
         }
 
         for description, source in invalid_programs.items():
@@ -200,9 +222,14 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
         self.assertEqual(words, ["002A", "D02A"])
 
     def test_memory_operands_require_registers(self) -> None:
-        words = self.assemble("load r2 r3\nstore r4 r5\n")
+        words = self.assemble(
+            "load r2 r3\n"
+            "store r4 r5\n"
+            "vload v2 r3\n"
+            "vstore v4 r5\n"
+        )
 
-        self.assertEqual(words, ["A280", "B700"])
+        self.assertEqual(words, ["A280", "B700", "A2A0", "B720"])
 
         for source in (
             "load r1 42\n",
@@ -211,6 +238,16 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "store r1 [r2]\n",
             "store r1 r0\n",
             "load r1 r9\n",
+            "vload r1 r2\n",
+            "vstore r1 r2\n",
+            "vload v1 42\n",
+            "vstore v1 r0\n",
+            "vload v9 r1\n",
+            "vadd v1 v2 r3\n",
+            "vsub v1 v9 v2\n",
+            "vmul v1 v2 v0\n",
+            "vdot v1 v2 v3\n",
+            "vdot v1 r2 r3\n",
         ):
             with self.subTest(source=source):
                 self.assert_assembly_fails(source)
@@ -239,12 +276,12 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
 
     def test_512_instructions_are_accepted_and_513_are_rejected(self) -> None:
         accepted_workspace = self.workspace / "accepted"
-        words = self.assemble("halt\n" * 512, accepted_workspace)
+        words = self.assemble("halt_or_vector\n" * 512, accepted_workspace)
         self.assertEqual(len(words), 512)
         self.assertTrue(all(word == "F000" for word in words))
 
         rejected_workspace = self.workspace / "rejected"
-        self.assert_assembly_fails("halt\n" * 513, rejected_workspace)
+        self.assert_assembly_fails("halt_or_vector\n" * 513, rejected_workspace)
         self.assertFalse((rejected_workspace / "program.hex").exists())
 
     def test_failure_does_not_publish_a_partial_hex_file(self) -> None:
@@ -262,12 +299,32 @@ class AssemblerCpuIntegrationTests(AssemblerTestSupport, unittest.TestCase):
             "ldi r1 7\n"
             "ldi r2 5\n"
             "add r3 r1 r2\n"
-            "ldi r4 20\n"
+            "ldi r4 400\n"
             "store r3 r4\n"
             "load r5 r4\n"
-            "ldi r6 21\n"
+            "ldi r6 401\n"
             "store r5 r6\n"
-            "halt\n"
+            "ldi r7 100\n"
+            "vload v1 r7\n"
+            "ldi r6 402\n"
+            "store r1 r6\n"
+            "ldi r7 110\n"
+            "vload v2 r7\n"
+            "vadd v1 v2 v3\n"
+            "vsub v1 v2 v4\n"
+            "vmul v1 v2 v5\n"
+            "vdot v1 v2 r3\n"
+            "ldi r6 403\n"
+            "store r3 r6\n"
+            "ldi r7 200\n"
+            "vstore v1 r7\n"
+            "ldi r7 300\n"
+            "vstore v3 r7\n"
+            "ldi r7 310\n"
+            "vstore v4 r7\n"
+            "ldi r7 320\n"
+            "vstore v5 r7\n"
+            "halt_or_vector\n"
         )
 
         iverilog = shutil.which("iverilog")
