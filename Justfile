@@ -19,6 +19,11 @@ test target:
     iverilog -g2012 {{rtl_include_dirs}} -o {{sim_dir}}/{{target}} "$testbench"
     vvp {{sim_dir}}/{{target}}
 
+# Assemble an arbitrary source program and run it in the generic CPU harness.
+run-program source:
+    python3 assembler.py "{{source}}"
+    just test program_tb
+
 test-all:
     just test adder_tb
     just test alu_tb

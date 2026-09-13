@@ -27,6 +27,27 @@ just clean
 
 Simulation output is written beneath `build/sim/`.
 
+### Run an arbitrary assembly program
+
+The generic `program_tb` loads an assembled hex program, runs it until `HALT`,
+and prints the final scalar registers. It does not provide program-specific
+input data or assertions.
+
+```sh
+just run-program path/to/program.asm
+```
+
+That command assembles the source into `program.hex` in the repository root,
+then runs `program_tb`. To run an already-assembled image, use:
+
+```sh
+just test program_tb
+```
+
+`program_tb` accepts optional VVP plusargs when invoking the simulator
+directly: `+PROGRAM=path/to/program.hex`, `+TIMEOUT=10000`, and
+`+VCD=build/sim/program.vcd`.
+
 ## Execution timing
 
 The CPU uses a multi-cycle design:
