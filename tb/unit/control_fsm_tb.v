@@ -43,6 +43,7 @@ module control_fsm_tb;
     memory_complete = 1;
 
     execute_single_cycle(`OP_LDI);
+    execute_single_cycle(`OP_LUI);
     execute_single_cycle(`OP_ADD);
     execute_single_cycle(`OP_CMP);
     execute_single_cycle(`OP_JMP);
@@ -67,7 +68,7 @@ module control_fsm_tb;
 
     // Unsupported/deferred opcodes stop without executing side effects.
     reset = 0;
-    opcode = 5'h16;
+    opcode = 5'h17;
     @(posedge clk); #1;
     @(posedge clk); #1;
     if (state !== `FSM_HALT) $fatal(1, "unsupported opcode did not stop");

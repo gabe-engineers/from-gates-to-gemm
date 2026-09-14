@@ -19,7 +19,7 @@ module control_fsm (
         state           <= `FSM_EXECUTE;
       `FSM_EXECUTE: begin
         case (opcode)
-          `OP_LDI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_AND, `OP_OR, `OP_XOR,
+          `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_AND, `OP_OR, `OP_XOR,
           `OP_SHL, `OP_SHR, `OP_MUL, `OP_CMP, `OP_JMP, `OP_JE,
           `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT:
             state <= `FSM_FETCH_DECODE;

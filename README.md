@@ -21,6 +21,8 @@ Install Icarus Verilog and `just`, then run:
 ```sh
 just test cpu_tb       # Run one testbench.
 just test-assembler   # Run assembler and assembler/CPU tests.
+just test-dotproduct  # Assemble and run the dot-product sample.
+just test-dotproduct-simd  # Assemble and run the SIMD dot-product sample.
 just test-all         # Run every testbench.
 just clean
 ```
@@ -36,6 +38,9 @@ input data or assertions.
 ```sh
 just run-program path/to/program.asm
 ```
+
+For the checked-in dot-product samples, use `just test-dotproduct` or
+`just test-dotproduct-simd`.
 
 That command assembles the source into `program.hex` in the repository root,
 then runs `program_tb`. To run an already-assembled image, use:
@@ -86,16 +91,17 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x13` | `VSUB vd va vb` | Lane-wise subtraction |
 | `0x14` | `VMUL vd va vb` | Lane-wise multiplication |
 | `0x15` | `VDOT rd va vb` | Dot product into a scalar register |
-| `0x16–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
+| `0x16` | `LUI rd imm8` | Load `imm8` into bits 15:8 and clear bits 7:0 |
+| `0x17–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
-`GLAUNCH`, `GWAIT`, `TID`, and `LUI` are intentionally not implemented yet.
+`GLAUNCH`, `GWAIT`, and `TID` are intentionally not implemented yet.
 Unsupported opcodes stop the current CPU implementation without side effects.
 
 Arithmetic, multiplication, and `VDOT` retain the low 16 bits. Logical shifts
 by 16 or more produce zero. Only `CMP` changes the equality flag.
 
-Because `LUI` is deferred, immediate constants above 255 must currently be
-computed with scalar instructions or loaded from memory.
+Use `LUI` together with `LDI` and a logical operation such as `OR` to construct
+16-bit constants from two 8-bit immediate values.
 
 ## Encoding
 

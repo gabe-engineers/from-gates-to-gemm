@@ -24,6 +24,14 @@ run-program source:
     python3 assembler.py "{{source}}"
     just test program_tb
 
+# Assemble and run the checked-in dot-product program.
+test-dotproduct:
+    just run-program dotproduct.asm
+
+# Assemble and run the checked-in SIMD dot-product program.
+test-dotproduct-simd:
+    just run-program dot_product_simd.asm
+
 test-all:
     just test adder_tb
     just test alu_tb

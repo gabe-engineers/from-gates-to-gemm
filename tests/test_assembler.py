@@ -38,6 +38,7 @@ VALID_INSTRUCTION_CASES = (
     ("vsub v7 v6 v5", "9EB0", (0x13, 6, 5, 4, 0, 0)),
     ("vmul v1 v8 v7", "A0F8", (0x14, 0, 7, 6, 0, 0)),
     ("vdot r6 v8 v7", "ADF8", (0x15, 5, 7, 6, 0, 0)),
+    ("lui r8 255", "B7FF", (0x16, 7, 0, 0, 0xFF00, 0)),
 )
 
 
@@ -56,6 +57,8 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         dst, src_a = (word >> 8) & 7, (word >> 5) & 7
     elif opcode == 0x00:
         dst, immediate = (word >> 8) & 7, word & 0xFF
+    elif opcode == 0x16:
+        dst, immediate = (word >> 8) & 7, (word & 0xFF) << 8
     elif opcode in (0x0D, 0x0E):
         address = word & 0x7FF
     return opcode, dst, src_a, src_b, immediate, address
@@ -114,14 +117,21 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
 
     def test_immediate_and_jump_boundaries(self) -> None:
         self.assertEqual(
-            self.assemble("ldi r1 0\nldi r1 255\njmp 0\nje 2047\n"),
-            ["0000", "00FF", "6800", "77FF"],
+            self.assemble("ldi r1 0\nldi r1 255\nlui r1 0\nlui r1 255\njmp 0\nje 2047\n"),
+            ["0000", "00FF", "B000", "B0FF", "6800", "77FF"],
         )
-        for source in ("ldi r1 256\n", "ldi r1 -1\n", "jmp 2048\n", "jmp -1\n"):
+        for source in (
+            "ldi r1 256\n",
+            "ldi r1 -1\n",
+            "lui r1 256\n",
+            "lui r1 -1\n",
+            "jmp 2048\n",
+            "jmp -1\n",
+        ):
             with self.subTest(source=source):
                 self.assert_fails(source)
 
-    def test_register_types_operand_counts_and_deferred_opcodes(self) -> None:
+    def test_register_types_operand_counts_and_unsupported_opcodes(self) -> None:
         invalid = (
             "ldi r0 0\n",
             "vld r1 r2\n",
@@ -132,7 +142,6 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "glaunch r1 r2 r3\n",
             "gwait\n",
             "tid r1\n",
-            "lui r1 1\n",
             "halt_or_vector\n",
         )
         for source in invalid:
@@ -152,8 +161,9 @@ class AssemblerCpuIntegrationTests(AssemblerTestSupport, unittest.TestCase):
             "ldi r1 7\n"
             "ldi r2 5\n"
             "add r3 r1 r2\n"
-            "ldi r4 200\n"
-            "add r4 r4 r4\n"       # 400
+            "lui r4 1\n"
+            "ldi r6 144\n"
+            "or r4 r4 r6\n"        # 400
             "store r4 r3\n"
             "load r5 r4\n"
             "ldi r6 1\n"

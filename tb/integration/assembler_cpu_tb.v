@@ -75,7 +75,7 @@ module assembler_cpu_tb;
     if (!halted)
       $fatal(1, "assembler program did not halt within %0d cycles", cycles);
 
-    // The assembler test builds addresses above 255 with scalar arithmetic,
+    // The assembler test builds addresses above 255 with LUI and OR,
     // then exercises scalar memory, all vector operations, and HALT.
     if (memory[400] !== 16'd12)
       $fatal(1, "assembled program stored %0d at address 400; expected 12", memory[400]);
