@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 ASSEMBLER = REPOSITORY_ROOT / "assembler.py"
-CPU_TESTBENCH = REPOSITORY_ROOT / "tb" / "integration" / "assembler_cpu_tb.v"
+CPU_TESTBENCH = REPOSITORY_ROOT / "tb" / "integration" / "assembler_cpu_tb.sv"
 
 VALID_INSTRUCTION_CASES = (
     ("ldi r8 255", "07FF", (0x00, 7, 0, 0, 0x00FF, 0)),

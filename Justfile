@@ -8,10 +8,10 @@ test target:
     #!/usr/bin/env sh
     set -eu
     mkdir -p {{sim_dir}}
-    if [ -f tb/integration/{{target}}.v ]; then
-      testbench=tb/integration/{{target}}.v
-    elif [ -f tb/unit/{{target}}.v ]; then
-      testbench=tb/unit/{{target}}.v
+    if [ -f tb/integration/{{target}}.sv ]; then
+      testbench=tb/integration/{{target}}.sv
+    elif [ -f tb/unit/{{target}}.sv ]; then
+      testbench=tb/unit/{{target}}.sv
     else
       printf '%s\n' "Unknown testbench: {{target}}" >&2
       exit 1
