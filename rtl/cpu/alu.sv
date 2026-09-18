@@ -2,7 +2,7 @@
 `define ALU_V
 
 `include "adder.sv"
-`include "alu_ops.vh"
+`include "alu_ops.svh"
 
 module alu_16bit (
     input      [ 3:0] op,

@@ -117,6 +117,7 @@ class Assembler:
             "vmul": descriptor(0x14, vector, vector, vector),
             "vdot": descriptor(0x15, scalar, vector, vector),
             "lui": immediate_descriptor(0x16),
+            "tid": descriptor(0x17, scalar),
         }
 
     def validate(

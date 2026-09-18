@@ -16,18 +16,31 @@ This project implements a multi-cycle 16-bit scalar and SIMD processor in Verilo
 
 ## Simulation
 
-Install Icarus Verilog and `just`, then run:
+Install Icarus Verilog, Yosys, and `just`, then run:
 
 ```sh
 just test cpu_tb       # Run one testbench.
 just test-assembler   # Run assembler and assembler/CPU tests.
 just test-dotproduct  # Assemble and run the dot-product sample.
 just test-dotproduct-simd  # Assemble and run the SIMD dot-product sample.
+just synth-check      # Check RTL-only code and synthesize the chip top level.
 just test-all         # Run every testbench.
 just clean
 ```
 
 Simulation output is written beneath `build/sim/`.
+
+### RTL hardware gate
+
+`just synth-check` checks only the design sources (`rtl/` and top-level HDL),
+never `tb/`. It first rejects common simulation-only constructs such as queues,
+dynamic arrays, array locator methods, randomization, delays, and testbench
+system tasks. It then runs Yosys on the `chip` top level and writes its log to
+`build/synth/chip.log`.
+
+`test-all` runs this check first, so new RTL must pass both the policy guard and
+generic synthesis before the test suite passes. The final FPGA or ASIC synthesis
+tool remains the authority for target-specific mapping and timing.
 
 ### Run an arbitrary assembly program
 
@@ -92,9 +105,10 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x14` | `VMUL vd va vb` | Lane-wise multiplication |
 | `0x15` | `VDOT rd va vb` | Dot product into a scalar register |
 | `0x16` | `LUI rd imm8` | Load `imm8` into bits 15:8 and clear bits 7:0 |
-| `0x17–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
+| `0x17` | `TID rd` | Write the executing thread ID (the scalar CPU always writes zero) |
+| `0x18–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
-`GLAUNCH`, `GWAIT`, and `TID` are intentionally not implemented yet.
+`GLAUNCH` and `GWAIT` are intentionally not implemented yet.
 Unsupported opcodes stop the current CPU implementation without side effects.
 
 Arithmetic, multiplication, and `VDOT` retain the low 16 bits. Logical shifts

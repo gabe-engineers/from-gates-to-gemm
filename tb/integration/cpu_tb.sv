@@ -40,7 +40,9 @@ module cpu_tb;
     memory[8] = {`OP_HALT, 11'd0};
     memory[9] = {`OP_LDI, 3'd5, 8'd16};
     memory[10] = {`OP_SHR, 3'd6, 3'd0, 3'd5, 2'd0};
-    memory[11] = {`OP_JMP, 11'h7FF};
+    memory[11] = {`OP_LDI, 3'd7, 8'hFF};
+    memory[12] = {`OP_TID, 3'd7, 8'd0};
+    memory[13] = {`OP_JMP, 11'h7FF};
     memory[2047] = {`OP_HALT, 11'd0};
     memory[16'h1234] = 16'd0;
 
@@ -60,6 +62,8 @@ module cpu_tb;
     else $fatal(1, "LOAD failed");
     assert (dut.datapath.registers.data_out[6] === 16'h0000)
     else $fatal(1, "wide SHR failed");
+    assert (dut.datapath.registers.data_out[7] === 16'h0000)
+    else $fatal(1, "TID did not return zero on the scalar CPU");
     assert (dut.control_unit_module.ir === {`OP_HALT, 11'd0})
     else $fatal(1, "addr11 jump did not fetch address 2047");
 

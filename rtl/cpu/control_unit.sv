@@ -112,7 +112,8 @@ module control_unit (
   function is_execute_register_write_op(input [4:0] opcode);
     begin
       case (opcode)
-        `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_SHL, `OP_SHR, `OP_MUL, `OP_AND, `OP_OR, `OP_XOR:
+        `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_SHL, `OP_SHR, `OP_MUL, `OP_AND, `OP_OR, `OP_XOR,
+        `OP_TID:
         is_execute_register_write_op = 1'b1;
         `OP_LOAD, `OP_STORE, `OP_CMP, `OP_JMP, `OP_JE, `OP_HALT,
         `OP_VLD, `OP_VST, `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT:
@@ -124,7 +125,7 @@ module control_unit (
 
   function is_immediate_writeback_op(input [4:0] opcode);
     begin
-      if (opcode == `OP_LOAD || opcode == `OP_LDI || opcode == `OP_LUI)
+      if (opcode == `OP_LOAD || opcode == `OP_LDI || opcode == `OP_LUI || opcode == `OP_TID)
         is_immediate_writeback_op = 1'b1;
       else is_immediate_writeback_op = 1'b0;
     end
@@ -132,7 +133,9 @@ module control_unit (
 
   assign datapath_immediate =
       (decoder_out_opcode == `OP_LOAD &&
-       fsm_out_state == `FSM_MEMORY) ? mem_read_data : decoder_out_immediate;
+       fsm_out_state == `FSM_MEMORY) ? mem_read_data :
+      // The scalar CPU executes as one lane, so its only thread ID is zero.
+      decoder_out_opcode == `OP_TID ? 16'd0 : decoder_out_immediate;
 
   // Normal writeback happens at the end of EXECUTE; LOAD writes back at the end of MEMORY.
   assign datapath_write_enable = (fsm_out_state == `FSM_EXECUTE && is_execute_register_write_op(

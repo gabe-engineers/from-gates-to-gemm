@@ -1,5 +1,5 @@
-`include "fsm_states.vh"
-`include "isa.vh"
+`include "fsm_states.svh"
+`include "isa.svh"
 
 module control_fsm (
   input clk,
@@ -21,7 +21,7 @@ module control_fsm (
         case (opcode)
           `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_AND, `OP_OR, `OP_XOR,
           `OP_SHL, `OP_SHR, `OP_MUL, `OP_CMP, `OP_JMP, `OP_JE,
-          `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT:
+          `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT, `OP_TID:
             state <= `FSM_FETCH_DECODE;
           `OP_LOAD, `OP_STORE, `OP_VLD, `OP_VST:
             state <= `FSM_MEMORY;

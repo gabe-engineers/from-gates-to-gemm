@@ -21,3 +21,4 @@
 `define OP_VMUL 5'h14
 `define OP_VDOT 5'h15
 `define OP_LUI 5'h16
+`define OP_TID 5'h17

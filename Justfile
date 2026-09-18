@@ -32,7 +32,11 @@ test-dotproduct:
 test-dotproduct-simd:
     just run-program dot_product_simd.asm
 
+synth-check:
+    sh scripts/synth_check.sh
+
 test-all:
+    just synth-check
     just test adder_tb
     just test alu_tb
     just test-assembler
@@ -42,7 +46,7 @@ test-all:
     just test decoder_tb
     just test gates_tb
     just test program_counter_tb
-    just test ram_tb
+    just test memory_tb
     just test register_file_tb
     just test vector_alu_tb
     just test vector_register_file_tb

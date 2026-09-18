@@ -1,4 +1,4 @@
-`include "isa.vh"
+`include "isa.svh"
 `include "alu.sv"
 
 module vector_alu_16bit (

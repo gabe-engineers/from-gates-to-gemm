@@ -1,3 +1,5 @@
+`include "warp.sv"
+
 module gpu (
     input clk,
     input reset,
@@ -8,9 +10,14 @@ module gpu (
     output mem_write_enable
 );
 
-
-  // warp(clk, reset, mem_addr, mem_read, mem_write)
-
-
+  warp warp_module (
+      .clk(clk),
+      .reset(reset),
+      .mem_read_data(mem_read_data),
+      .mem_read_address(mem_read_address),
+      .mem_write_data(mem_write_data),
+      .mem_write_address(mem_write_address),
+      .mem_write_enable(mem_write_enable)
+  );
 
 endmodule

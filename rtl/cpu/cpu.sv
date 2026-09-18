@@ -1,4 +1,4 @@
-`include "fsm_states.vh"
+`include "fsm_states.svh"
 `include "control_unit.sv"
 `include "datapath.sv"
 

@@ -42,9 +42,10 @@ module decoder_tb;
     test_case(12, {`OP_VADD, 3'd5, 3'd7, 3'd6, 2'd0}, `OP_VADD, 3'd5, 3'd7, 3'd6, 16'd0, 16'd0);
     test_case(13, {`OP_VDOT, 3'd5, 3'd7, 3'd6, 2'd0}, `OP_VDOT, 3'd5, 3'd7, 3'd6, 16'd0, 16'd0);
     test_case(14, {`OP_LUI, 3'd6, 8'hA5}, `OP_LUI, 3'd6, 3'd0, 3'd0, 16'hA500, 16'd0);
+    test_case(15, {`OP_TID, 3'd4, 8'h00}, `OP_TID, 3'd4, 3'd0, 3'd0, 16'd0, 16'd0);
 
     // Reserved fields do not alter operand fields; assemblers emit them as zero.
-    test_case(15, {`OP_MOV, 3'd2, 3'd4, 5'h1F}, `OP_MOV, 3'd2, 3'd4, 3'd0, 16'd0, 16'd0);
+    test_case(16, {`OP_MOV, 3'd2, 3'd4, 5'h1F}, `OP_MOV, 3'd2, 3'd4, 3'd0, 16'd0, 16'd0);
     $display("decoder_tb passed");
     $finish;
   end

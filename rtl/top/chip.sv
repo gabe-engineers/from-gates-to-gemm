@@ -1,6 +1,6 @@
 `include "cpu.sv"
 `include "gpu.sv"
-`include "ram.sv"
+`include "memory.sv"
 
 module chip (
     input  clk,

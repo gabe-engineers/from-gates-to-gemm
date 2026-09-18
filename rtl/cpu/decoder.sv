@@ -1,4 +1,4 @@
-`include "isa.vh"
+`include "isa.svh"
 
 module decoder (
     input      [15:0] instruction_data,
@@ -55,6 +55,10 @@ module decoder (
       `OP_LUI: begin
         dst_reg   = instruction_data[10:8];
         immediate = {instruction_data[7:0], 8'b0};
+      end
+
+      `OP_TID: begin
+        dst_reg = instruction_data[10:8];
       end
 
       `OP_JMP, `OP_JE: begin

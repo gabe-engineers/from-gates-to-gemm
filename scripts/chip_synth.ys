@@ -1,0 +1,9 @@
+# The design entry point reaches the remaining RTL through `include files.
+# Keep this source list separate from tb/, which is never read by Yosys.
+read_verilog -sv -I. -Irtl/include -Irtl/lib -Irtl/cpu -Irtl/memory -Irtl/top rtl/top/chip.sv
+hierarchy -check -top chip
+proc
+check -assert
+synth -top chip
+check -assert
+stat

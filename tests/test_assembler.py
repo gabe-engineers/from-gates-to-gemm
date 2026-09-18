@@ -39,6 +39,7 @@ VALID_INSTRUCTION_CASES = (
     ("vmul v1 v8 v7", "A0F8", (0x14, 0, 7, 6, 0, 0)),
     ("vdot r6 v8 v7", "ADF8", (0x15, 5, 7, 6, 0, 0)),
     ("lui r8 255", "B7FF", (0x16, 7, 0, 0, 0xFF00, 0)),
+    ("tid r8", "BF00", (0x17, 7, 0, 0, 0, 0)),
 )
 
 
@@ -59,6 +60,8 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         dst, immediate = (word >> 8) & 7, word & 0xFF
     elif opcode == 0x16:
         dst, immediate = (word >> 8) & 7, (word & 0xFF) << 8
+    elif opcode == 0x17:
+        dst = (word >> 8) & 7
     elif opcode in (0x0D, 0x0E):
         address = word & 0x7FF
     return opcode, dst, src_a, src_b, immediate, address
@@ -141,7 +144,7 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "store r1\n",
             "glaunch r1 r2 r3\n",
             "gwait\n",
-            "tid r1\n",
+            "tid r0\n",
             "halt_or_vector\n",
         )
         for source in invalid:
