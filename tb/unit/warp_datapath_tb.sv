@@ -1,5 +1,6 @@
 `include "register_file.sv"
 `include "alu.sv"
+`include "control_helpers.svh"
 `include "warp_datapath.sv"
 
 module warp_datapath_tb;

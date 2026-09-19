@@ -1,4 +1,5 @@
-`include "gpu_types.sv"
+`include "gpu_types.svh"
+`include "control_helpers.svh"
 
 module warp_lane (
     input clk,

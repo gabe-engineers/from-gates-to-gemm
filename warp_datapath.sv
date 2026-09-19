@@ -1,4 +1,4 @@
-`include "gpu_types.sv"
+`include "gpu_types.svh"
 `include "warp_lane.sv"
 
 module warp_datapath (

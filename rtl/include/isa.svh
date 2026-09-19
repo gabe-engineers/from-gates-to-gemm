@@ -22,3 +22,5 @@
 `define OP_VDOT 5'h15
 `define OP_LUI 5'h16
 `define OP_TID 5'h17
+`define OP_GLAUNCH 5'h18
+`define OP_GWAIT 5'h19

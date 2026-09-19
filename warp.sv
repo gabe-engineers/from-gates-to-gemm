@@ -1,4 +1,4 @@
-`include "gpu_types.sv"
+`include "gpu_types.svh"
 `include "warp_control_unit.sv"
 `include "warp_datapath.sv"
 
@@ -6,8 +6,7 @@ module warp (
     input clk,
     input reset,
     input [7:0][15:0] mem_read_data,
-    output gpu_types::warp_mem_request warp_mem_request,
-    output mem_write_enable
+    output gpu_types::warp_mem_request warp_mem_request
 );
 
   wire gpu_types::lane_request_t lane_request;

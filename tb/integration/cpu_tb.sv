@@ -5,24 +5,23 @@ module cpu_tb;
   logic reset;
   logic [15:0] memory[0:65535];
   wire [15:0] mem_read_data;
-  wire [15:0] mem_address;
-  wire [15:0] mem_write_data;
-  wire mem_write_enable;
+  wire cpu_types_pkg::cpu_mem_request_t mem_request;
   wire halted;
+  wire gpu_types::gpu_command_t gpu_command;
   integer cycles;
 
   cpu dut (
-      clk,
-      reset,
-      mem_read_data,
-      mem_address,
-      mem_write_data,
-      mem_write_enable,
-      halted
+      .clk          (clk),
+      .reset        (reset),
+      .mem_read_data(mem_read_data),
+      .mem_request  (mem_request),
+      .halted       (halted),
+      .gpu_command  (gpu_command)
   );
-  assign mem_read_data = memory[mem_address];
+  assign mem_read_data = memory[mem_request.address];
   always #5 clk = ~clk;
-  always @(posedge clk) if (mem_write_enable) memory[mem_address] <= mem_write_data;
+  always @(posedge clk)
+    if (mem_request.write_enable) memory[mem_request.address] <= mem_request.write_data;
 
   initial begin
     clk = 0;
@@ -73,6 +72,23 @@ module cpu_tb;
     if (dut.datapath.registers.data_out[0] !== 16'h1234 ||
         dut.datapath.registers.data_out[4] !== 16'h00AA)
       $fatal(1, "HALT changed registers");
+
+    // GPU commands are visible only while their instruction executes.
+    reset = 1'b1;
+    memory[0] = {`OP_GLAUNCH, 11'd0};
+    @(posedge clk);
+    #1;
+    reset = 1'b0;
+
+    @(posedge clk);
+    #1;
+    if (gpu_command !== gpu_types::GPU_COMMAND_LAUNCH)
+      $fatal(1, "GLAUNCH was not forwarded to the CPU GPU-command output");
+
+    @(posedge clk);
+    #1;
+    if (gpu_command !== gpu_types::GPU_COMMAND_NONE)
+      $fatal(1, "GPU command remained asserted outside EXECUTE");
 
     $display("cpu_tb passed");
     $finish;

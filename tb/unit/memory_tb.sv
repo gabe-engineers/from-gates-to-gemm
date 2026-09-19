@@ -5,28 +5,25 @@ module memory_tb;
   localparam int GPU_LANES = 8;
 
   logic        clk;
-  logic [15:0] cpu_address;
-  logic        cpu_write_enable;
-  logic [15:0] cpu_write_data;
+  cpu_types_pkg::cpu_mem_request_t cpu_mem_request;
   logic        gpu_write_enable;
   logic [127:0] gpu_mem_address;
   logic [127:0] gpu_mem_write_data;
-  gpu_types::warp_mem_request gpu_mem_request;
+  wire gpu_types::warp_mem_request gpu_mem_request;
   wire [15:0] cpu_read_data;
   wire [7:0][15:0] gpu_read_data;
 
   memory dut (
-      .clk             (clk),
-      .cpu_address     (cpu_address),
-      .cpu_write_enable(cpu_write_enable),
-      .cpu_write_data  (cpu_write_data),
-      .cpu_read_data   (cpu_read_data),
-      .gpu_write_enable(gpu_write_enable),
-      .gpu_mem_request (gpu_mem_request),
-      .gpu_read_data   (gpu_read_data)
+      .clk            (clk),
+      .cpu_mem_request(cpu_mem_request),
+      .cpu_read_data  (cpu_read_data),
+      .gpu_mem_request(gpu_mem_request),
+      .gpu_read_data  (gpu_read_data)
   );
 
-  assign gpu_mem_request = {gpu_mem_address, gpu_mem_write_data};
+  assign gpu_mem_request.write_enable = gpu_write_enable;
+  assign gpu_mem_request.mem_address = gpu_mem_address;
+  assign gpu_mem_request.mem_write_data = gpu_mem_write_data;
 
   task tick;
     begin
@@ -54,9 +51,7 @@ module memory_tb;
 
   initial begin
     clk = 1'b0;
-    cpu_address = 16'd0;
-    cpu_write_enable = 1'b0;
-    cpu_write_data = 16'd0;
+    cpu_mem_request = '0;
     gpu_write_enable = 1'b0;
     for (int lane = 0; lane < GPU_LANES; lane++) begin
       gpu_mem_address[lane * 16 +: 16] = 16'd0;
@@ -69,9 +64,9 @@ module memory_tb;
     for (int lane = 0; lane < GPU_LANES; lane++) expect_gpu_read(lane, 16'd0);
 
     // CPU and all eight GPU lanes can write distinct words on the same edge.
-    cpu_address = 16'd42;
-    cpu_write_enable = 1'b1;
-    cpu_write_data = 16'hA5A5;
+    cpu_mem_request.address = 16'd42;
+    cpu_mem_request.write_enable = 1'b1;
+    cpu_mem_request.write_data = 16'hA5A5;
     gpu_write_enable = 1'b1;
     for (int lane = 0; lane < GPU_LANES; lane++) begin
       gpu_mem_address[lane * 16 +: 16] = 16'd80 + lane;
@@ -83,9 +78,9 @@ module memory_tb;
       expect_gpu_read(lane, 16'h1000 + lane);
 
     // The CPU and GPU ports can read unrelated words at the same time.
-    cpu_write_enable = 1'b0;
+    cpu_mem_request.write_enable = 1'b0;
     gpu_write_enable = 1'b0;
-    cpu_address = 16'd87;
+    cpu_mem_request.address = 16'd87;
     for (int lane = 0; lane < GPU_LANES; lane++)
       gpu_mem_address[lane * 16 +: 16] = 16'd87 - lane;
     #1;
@@ -94,7 +89,7 @@ module memory_tb;
       expect_gpu_read(lane, 16'h1007 - lane);
 
     // A disabled warp store leaves every lane's target word unchanged.
-    cpu_address = 16'd200;
+    cpu_mem_request.address = 16'd200;
     gpu_write_enable = 1'b0;
     for (int lane = 0; lane < GPU_LANES; lane++) begin
       gpu_mem_address[lane * 16 +: 16] = 16'd200 + lane;
@@ -111,9 +106,9 @@ module memory_tb;
     for (int lane = 0; lane < GPU_LANES; lane++) expect_gpu_read(lane, 16'h2000 + lane);
 
     // A CPU write wins when it collides with any enabled GPU lane.
-    cpu_address = 16'd300;
-    cpu_write_enable = 1'b1;
-    cpu_write_data = 16'hC0DE;
+    cpu_mem_request.address = 16'd300;
+    cpu_mem_request.write_enable = 1'b1;
+    cpu_mem_request.write_data = 16'hC0DE;
     gpu_write_enable = 1'b1;
     for (int lane = 0; lane < GPU_LANES; lane++) begin
       gpu_mem_address[lane * 16 +: 16] = 16'd320 + lane;

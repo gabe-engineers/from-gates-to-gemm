@@ -2,14 +2,12 @@
 
 module decoder_tb;
   logic  [15:0] instruction_data;
-  wire [ 4:0] opcode;
-  wire [ 2:0] dst_reg;
-  wire [ 2:0] src_reg_a;
-  wire [ 2:0] src_reg_b;
-  wire [15:0] immediate;
-  wire [15:0] address;
+  wire cpu_types_pkg::decoder_out_t decoder_out;
 
-  decoder dut (instruction_data, opcode, dst_reg, src_reg_a, src_reg_b, immediate, address);
+  decoder dut (
+      .instruction_data(instruction_data),
+      .out             (decoder_out)
+  );
 
   task test_case(input [7:0] number, input [15:0] instruction,
                  input [4:0] expected_opcode, input [2:0] expected_dst,
@@ -18,9 +16,9 @@ module decoder_tb;
     begin
       instruction_data = instruction;
       #1;
-      if (opcode !== expected_opcode || dst_reg !== expected_dst ||
-          src_reg_a !== expected_a || src_reg_b !== expected_b ||
-          immediate !== expected_immediate || address !== expected_address)
+      if (decoder_out.opcode !== expected_opcode || decoder_out.dst_reg !== expected_dst ||
+          decoder_out.src_reg_a !== expected_a || decoder_out.src_reg_b !== expected_b ||
+          decoder_out.immediate !== expected_immediate || decoder_out.address !== expected_address)
         $fatal(1, "decoder case %0d failed for %h", number, instruction);
     end
   endtask
@@ -46,6 +44,20 @@ module decoder_tb;
 
     // Reserved fields do not alter operand fields; assemblers emit them as zero.
     test_case(16, {`OP_MOV, 3'd2, 3'd4, 5'h1F}, `OP_MOV, 3'd2, 3'd4, 3'd0, 16'd0, 16'd0);
+
+    if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
+      $fatal(1, "regular instruction did not emit GPU_COMMAND_NONE");
+
+    instruction_data = {`OP_GLAUNCH, 11'd0};
+    #1;
+    if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_LAUNCH)
+      $fatal(1, "GLAUNCH did not emit GPU_COMMAND_LAUNCH");
+
+    instruction_data = {`OP_GWAIT, 11'd0};
+    #1;
+    if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_WAIT)
+      $fatal(1, "GWAIT did not emit GPU_COMMAND_WAIT");
+
     $display("decoder_tb passed");
     $finish;
   end

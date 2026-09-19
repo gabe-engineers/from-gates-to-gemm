@@ -8,9 +8,7 @@ module assembler_cpu_tb;
   logic         reset;
   logic  [15:0] memory [0:511];
   wire [15:0] mem_read_data;
-  wire [15:0] mem_address;
-  wire [15:0] mem_write_data;
-  wire        mem_write_enable;
+  wire cpu_types_pkg::cpu_mem_request_t mem_request;
   wire        halted;
   integer     index;
   integer     cycles;
@@ -19,19 +17,17 @@ module assembler_cpu_tb;
       .clk             (clk),
       .reset           (reset),
       .mem_read_data   (mem_read_data),
-      .mem_address     (mem_address),
-      .mem_write_data  (mem_write_data),
-      .mem_write_enable(mem_write_enable),
+      .mem_request     (mem_request),
       .halted          (halted)
   );
 
-  assign mem_read_data = memory[mem_address];
+  assign mem_read_data = memory[mem_request.address];
 
   always #5 clk = ~clk;
 
   always @(posedge clk) begin
-    if (mem_write_enable)
-      memory[mem_address] <= mem_write_data;
+    if (mem_request.write_enable)
+      memory[mem_request.address] <= mem_request.write_data;
   end
 
   initial begin
