@@ -1,6 +1,7 @@
 `include "decoder.sv"
 `include "program_counter.sv"
 `include "control_fsm.sv"
+`include "control_helpers.svh"
 
 module control_unit (
     input         clk,
@@ -11,7 +12,7 @@ module control_unit (
     output [15:0] mem_addr,
     output        mem_write_enable,
     output        datapath_write_enable,
-    output        datapath_writeback_select,
+    output [ 1:0] datapath_writeback_source,
     output [ 3:0] alu_op,
     output [15:0] datapath_immediate,
     output [ 2:0] datapath_src_reg_a,
@@ -109,38 +110,16 @@ module control_unit (
       cmp_equal_flag <= datapath_read_data_a == datapath_read_data_b;
   end
 
-  function is_execute_register_write_op(input [4:0] opcode);
-    begin
-      case (opcode)
-        `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_SHL, `OP_SHR, `OP_MUL, `OP_AND, `OP_OR, `OP_XOR,
-        `OP_TID:
-        is_execute_register_write_op = 1'b1;
-        `OP_LOAD, `OP_STORE, `OP_CMP, `OP_JMP, `OP_JE, `OP_HALT,
-        `OP_VLD, `OP_VST, `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT:
-        is_execute_register_write_op = 1'b0;
-        default: is_execute_register_write_op = 1'b0;
-      endcase
-    end
-  endfunction
-
-  function is_immediate_writeback_op(input [4:0] opcode);
-    begin
-      if (opcode == `OP_LOAD || opcode == `OP_LDI || opcode == `OP_LUI || opcode == `OP_TID)
-        is_immediate_writeback_op = 1'b1;
-      else is_immediate_writeback_op = 1'b0;
-    end
-  endfunction
-
   assign datapath_immediate =
       (decoder_out_opcode == `OP_LOAD &&
        fsm_out_state == `FSM_MEMORY) ? mem_read_data :
-      // The scalar CPU executes as one lane, so its only thread ID is zero.
-      decoder_out_opcode == `OP_TID ? 16'd0 : decoder_out_immediate;
+      decoder_out_immediate;
 
   // Normal writeback happens at the end of EXECUTE; LOAD writes back at the end of MEMORY.
-  assign datapath_write_enable = (fsm_out_state == `FSM_EXECUTE && is_execute_register_write_op(
-      decoder_out_opcode
-  )) || (fsm_out_state == `FSM_EXECUTE && is_vector_dot_operation) ||
+  assign datapath_write_enable =
+      (fsm_out_state == `FSM_EXECUTE &&
+       control_helpers_pkg::is_execute_register_write_op(decoder_out_opcode)) ||
+      (fsm_out_state == `FSM_EXECUTE && is_vector_dot_operation) ||
       (fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD);
 
   // Register-held addresses are 16 bits. VLD and VST add the active lane number
@@ -188,7 +167,8 @@ module control_unit (
 
   assign halted = fsm_out_state == `FSM_HALT;
 
-  assign datapath_writeback_select = is_immediate_writeback_op(decoder_out_opcode);
+  assign datapath_writeback_source =
+      control_helpers_pkg::writeback_source_for_opcode(decoder_out_opcode);
 
   assign alu_op = decoder_out_opcode[3:0];
 

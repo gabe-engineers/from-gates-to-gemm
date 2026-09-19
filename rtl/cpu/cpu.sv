@@ -1,6 +1,7 @@
 `include "fsm_states.svh"
 `include "control_unit.sv"
 `include "datapath.sv"
+`include "control_helpers.svh"
 
 module cpu (
     input  wire        clk,
@@ -16,7 +17,7 @@ module cpu (
   wire [ 2:0] datapath_src_reg_b;
   wire [ 2:0] datapath_dst_reg;
   wire        datapath_write_enable;
-  wire        datapath_writeback_select;
+  wire [ 1:0] datapath_writeback_source;
   wire [ 3:0] alu_op;
   wire [15:0] datapath_immediate;
   wire [15:0] datapath_read_data_a;
@@ -52,7 +53,7 @@ module cpu (
       .mem_addr                            (mem_address),
       .mem_write_enable                    (mem_write_enable),
       .datapath_write_enable               (datapath_write_enable),
-      .datapath_writeback_select           (datapath_writeback_select),
+      .datapath_writeback_source           (datapath_writeback_source),
       .alu_op                              (alu_op),
       .datapath_immediate                  (datapath_immediate),
       .datapath_src_reg_a                  (datapath_src_reg_a),
@@ -78,7 +79,8 @@ module cpu (
       .clk(clk),
       .reset(reset),
       .write_enable(datapath_write_enable),
-      .writeback_select(datapath_writeback_select),
+      .writeback_source(datapath_writeback_source),
+      .thread_id(3'd0),
       .alu_op(alu_op),
       .immediate(datapath_immediate),
       .read_addr_a(datapath_src_reg_a),

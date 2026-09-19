@@ -2,12 +2,14 @@
 `include "vector_register_file.sv"
 `include "vector_alu.sv"
 `include "alu.sv"
+`include "control_helpers.svh"
 
 module datapath_16bit (
     input         clk,
     input         reset,
     input         write_enable,
-    input         writeback_select,            // ALU = 0, IMMEDIATE = 1
+    input  [ 1:0] writeback_source,
+    input  [ 2:0] thread_id,
     input  [ 3:0] alu_op,
     input  [15:0] immediate,
     input  [ 2:0] read_addr_a,
@@ -38,7 +40,9 @@ module datapath_16bit (
   wire [ 15:0] vector_dot_product;
 
   assign write_data = vector_dot_writeback_select ? vector_dot_product :
-                      writeback_select ? immediate : alu_out;
+                      writeback_source == control_helpers_pkg::WB_IMMEDIATE ? immediate :
+                      writeback_source == control_helpers_pkg::WB_THREAD_ID ?
+                          {13'b0, thread_id} : alu_out;
 
   register_file registers (
       .clk           (clk),

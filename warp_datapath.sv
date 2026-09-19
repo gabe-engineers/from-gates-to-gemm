@@ -1,30 +1,25 @@
-`include "gpu_types.vh"
+`include "gpu_types.sv"
+`include "warp_lane.sv"
 
 module warp_datapath (
-    input                                    clk,
-    input                                    reset,
-    input                                    write_enable,
-    input                                    writeback_select,       // ALU = 0, IMMEDIATE = 1
-    input                             [ 3:0] alu_op,
-    input                             [15:0] immediate,
-    input  gpu_types::lane_request_t         lane_requests   [7:0],
-    output gpu_types::lane_response_t        lane_reponses   [7:0]
+    input                                   clk,
+    input                                   reset,
+    input  gpu_types::lane_request_t        lane_request,
+    output                    [7:0][15:0] lane_responses
 );
 
   parameter int NUM_LANES = 8;
 
   generate
     for (genvar i = 0; i < NUM_LANES; i++) begin : warp_lanes
+      localparam logic [2:0] LANE_ID = i;
 
       warp_lane lane_module (
           .clk(clk),
           .reset(reset),
-          .write_enable(write_enable),
-          .writeback_select(writeback_select),
-          .alu_op(alu_op),
-          .immediate(immediate),
-          .lane_request(lane_requests[i]),
-          .lane_response(lane_responses[i])
+          .lane_id(LANE_ID),
+          .lane_request(lane_request),
+          .out(lane_responses[i])
       );
 
     end

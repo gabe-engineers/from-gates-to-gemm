@@ -50,6 +50,8 @@ test-all:
     just test register_file_tb
     just test vector_alu_tb
     just test vector_register_file_tb
+    just test warp_control_unit_tb
+    just test warp_datapath_tb
     just test register_tb
 
 test-assembler:

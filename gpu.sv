@@ -1,12 +1,11 @@
 `include "warp.sv"
+`include "gpu_types.sv"
 
 module gpu (
     input clk,
     input reset,
-    input [15:0] mem_read_data,
-    output [15:0] mem_read_address,
-    output [15:0] mem_write_data,
-    output [15:0] mem_write_address,
+    input [7:0][15:0] mem_read_data,
+    output gpu_types::warp_mem_request gpu_mem_request,
     output mem_write_enable
 );
 
@@ -14,9 +13,7 @@ module gpu (
       .clk(clk),
       .reset(reset),
       .mem_read_data(mem_read_data),
-      .mem_read_address(mem_read_address),
-      .mem_write_data(mem_write_data),
-      .mem_write_address(mem_write_address),
+      .warp_mem_request(gpu_mem_request),
       .mem_write_enable(mem_write_enable)
   );
 

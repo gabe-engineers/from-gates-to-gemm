@@ -1,12 +1,26 @@
 `include "gpu_types.sv"
+`include "fsm_states.svh"
+`include "control_helpers.svh"
 
 module warp_control_unit (
     input clk,
     input reset,
     input [15:0] mem_read_data,
-    input gpu_types::lane_request_t lane_requests[7:0],
-    output gpu_types::lane_response_t lane_responses[7:0]
+    output wire gpu_types::lane_request_t out
 );
+
+  wire [2:0] fsm_out_state;
+  wire [4:0] decoder_out_opcode;
+  wire [15:0] ir;
+
+  assign out.alu_op = decoder_out_opcode[3:0];
+  assign out.writeback_source =
+      control_helpers_pkg::writeback_source_for_opcode(decoder_out_opcode);
+
+  assign out.write_enable =
+      (fsm_out_state == `FSM_EXECUTE &&
+       control_helpers_pkg::is_execute_register_write_op(decoder_out_opcode)) ||
+      (fsm_out_state == `FSM_MEMORY && decoder_out_opcode == `OP_LOAD);
 
   register ir_module (
       .clk         (clk),
@@ -19,21 +33,19 @@ module warp_control_unit (
   decoder decoder_module (
       .instruction_data(ir),
       .opcode          (decoder_out_opcode),
-      .dst_reg         (decoder_out_dst_reg),
-      .src_reg_a       (decoder_out_src_reg_a),
-      .src_reg_b       (decoder_out_src_reg_b),
-      .immediate       (decoder_out_immediate),
-      .address         (decoder_out_address)
+      .dst_reg         (out.dst_reg),
+      .src_reg_a       (out.src_reg_a),
+      .src_reg_b       (out.src_reg_b),
+      .immediate       (out.immediate),
+      .address         (out.jmp_address)
   );
 
-  wrap_datapath datapath_module (
-      .clk(clk),
-      .reset(reset),
-      .write_enable(),
-      .writeback_select(),
-      .alu_op(),
-      .lane_requests(lane_requests),
-      .lane_responses(lane_responses)
+  control_fsm fsm (
+      .clk            (clk),
+      .reset          (reset),
+      .opcode         (decoder_out_opcode),
+      .memory_complete(1'b1),
+      .state          (fsm_out_state)
   );
 
 endmodule
