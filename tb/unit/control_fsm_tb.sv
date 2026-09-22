@@ -3,11 +3,23 @@
 module control_fsm_tb;
   logic clk;
   logic reset;
+  logic enable;
   logic [4:0] opcode;
+  logic instruction_valid;
   logic memory_complete;
+  logic gpu_busy;
   wire [2:0] state;
 
-  control_fsm dut (clk, reset, opcode, memory_complete, state);
+  control_fsm dut (
+      .clk(clk),
+      .reset(reset),
+      .enable(enable),
+      .opcode(opcode),
+      .instruction_valid(instruction_valid),
+      .memory_complete(memory_complete),
+      .gpu_busy(gpu_busy),
+      .state(state)
+  );
   always #5 clk = ~clk;
 
   task execute_single_cycle(input [4:0] operation);
@@ -39,8 +51,11 @@ module control_fsm_tb;
   initial begin
     clk = 0;
     reset = 0;
+    enable = 1;
     opcode = `OP_LDI;
+    instruction_valid = 1;
     memory_complete = 1;
+    gpu_busy = 0;
 
     execute_single_cycle(`OP_LDI);
     execute_single_cycle(`OP_LUI);
@@ -50,6 +65,8 @@ module control_fsm_tb;
     execute_single_cycle(`OP_JMP);
     execute_single_cycle(`OP_VADD);
     execute_single_cycle(`OP_VDOT);
+    execute_single_cycle(`OP_GLAUNCH);
+    execute_single_cycle(`OP_GWAIT);
     execute_memory(`OP_LOAD);
     execute_memory(`OP_STORE);
     execute_memory(`OP_VLD);
@@ -67,9 +84,37 @@ module control_fsm_tb;
     @(posedge clk); #1;
     if (state !== `FSM_FETCH_DECODE) $fatal(1, "reset did not leave HALT");
 
+    // GWAIT remains in its dedicated state until the GPU reports idle.
+    reset = 0;
+    gpu_busy = 1;
+    opcode = `OP_GWAIT;
+    @(posedge clk); #1;
+    if (state !== `FSM_EXECUTE) $fatal(1, "GWAIT did not enter EXECUTE");
+    @(posedge clk); #1;
+    if (state !== `FSM_GPU_WAIT) $fatal(1, "GWAIT did not enter GPU_WAIT");
+    @(posedge clk); #1;
+    if (state !== `FSM_GPU_WAIT) $fatal(1, "GWAIT completed while GPU was busy");
+    gpu_busy = 0;
+    @(posedge clk); #1;
+    if (state !== `FSM_FETCH_DECODE) $fatal(1, "GWAIT did not resume when GPU became idle");
+
+    // A decoder can halt a processor before an otherwise recognizable opcode
+    // reaches its datapath.
+    instruction_valid = 0;
+    opcode = `OP_ADD;
+    @(posedge clk); #1;
+    if (state !== `FSM_EXECUTE) $fatal(1, "invalid instruction did not enter EXECUTE");
+    @(posedge clk); #1;
+    if (state !== `FSM_HALT) $fatal(1, "invalid instruction did not halt");
+    reset = 1;
+    @(posedge clk); #1;
+    if (state !== `FSM_FETCH_DECODE) $fatal(1, "reset did not recover from invalid instruction");
+    reset = 0;
+    instruction_valid = 1;
+
     // Unsupported/deferred opcodes stop without executing side effects.
     reset = 0;
-    opcode = 5'h18;
+    opcode = 5'h1A;
     @(posedge clk); #1;
     @(posedge clk); #1;
     if (state !== `FSM_HALT) $fatal(1, "unsupported opcode did not stop");

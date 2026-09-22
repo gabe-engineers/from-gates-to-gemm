@@ -33,6 +33,7 @@ module program_tb;
       .clk             (clk),
       .reset           (reset),
       .mem_read_data   (mem_read_data),
+      .gpu_state       (gpu_types::GPU_STATE_IDLE),
       .mem_request     (mem_request),
       .halted          (halted)
   );

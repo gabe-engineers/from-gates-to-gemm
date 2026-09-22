@@ -47,6 +47,7 @@ package cpu_types_pkg;
     logic        datapath_vector_dot_writeback_select;
     // Encoded by gpu_types::GPU_COMMAND_*.
     logic [ 1:0] gpu_command;
+    logic [15:0] gpu_launch_address;
     logic        halted;
   } control_unit_out_t;
 

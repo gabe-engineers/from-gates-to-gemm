@@ -48,15 +48,17 @@ module decoder_tb;
     if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "regular instruction did not emit GPU_COMMAND_NONE");
 
-    instruction_data = {`OP_GLAUNCH, 11'd0};
+    instruction_data = {`OP_GLAUNCH, 11'd23};
     #1;
     if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_LAUNCH)
       $fatal(1, "GLAUNCH did not emit GPU_COMMAND_LAUNCH");
+    if (decoder_out.address !== 16'd23)
+      $fatal(1, "GLAUNCH did not decode its start address");
 
     instruction_data = {`OP_GWAIT, 11'd0};
     #1;
-    if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_WAIT)
-      $fatal(1, "GWAIT did not emit GPU_COMMAND_WAIT");
+    if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
+      $fatal(1, "GWAIT incorrectly emitted a GPU command");
 
     $display("decoder_tb passed");
     $finish;

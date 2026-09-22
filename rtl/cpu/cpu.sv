@@ -9,9 +9,11 @@ module cpu (
     input  wire                            clk,
     input  wire                            reset,
     input  wire                     [15:0] mem_read_data,
+    input  gpu_types::gpu_state_t           gpu_state,
     output wire cpu_types_pkg::cpu_mem_request_t mem_request,
     output wire                            halted,
-    output gpu_types::gpu_command_t        gpu_command
+    output gpu_types::gpu_command_t        gpu_command,
+    output wire                     [15:0] gpu_launch_address
 );
 
   wire cpu_types_pkg::control_unit_out_t control_out;
@@ -27,6 +29,7 @@ module cpu (
   assign mem_request.write_data =
       control_out.vector_store_active ? vector_read_data : datapath_read_data_a;
   assign gpu_command = gpu_types::gpu_command_t'(control_out.gpu_command);
+  assign gpu_launch_address = control_out.gpu_launch_address;
   assign halted = control_out.halted;
 
   control_unit control_unit_module (
@@ -36,6 +39,7 @@ module cpu (
       .mem_read_data       (mem_read_data),
       .datapath_read_data_a(datapath_read_data_a),
       .datapath_read_data_b(datapath_read_data_b),
+      .gpu_state           (gpu_state),
       .out                 (control_out)
   );
 

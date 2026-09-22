@@ -8,15 +8,19 @@ module cpu_tb;
   wire cpu_types_pkg::cpu_mem_request_t mem_request;
   wire halted;
   wire gpu_types::gpu_command_t gpu_command;
+  wire [15:0] gpu_launch_address;
+  gpu_types::gpu_state_t gpu_state;
   integer cycles;
 
   cpu dut (
       .clk          (clk),
       .reset        (reset),
       .mem_read_data(mem_read_data),
+      .gpu_state    (gpu_state),
       .mem_request  (mem_request),
       .halted       (halted),
-      .gpu_command  (gpu_command)
+      .gpu_command  (gpu_command),
+      .gpu_launch_address(gpu_launch_address)
   );
   assign mem_read_data = memory[mem_request.address];
   always #5 clk = ~clk;
@@ -26,6 +30,7 @@ module cpu_tb;
   initial begin
     clk = 0;
     reset = 1;
+    gpu_state = gpu_types::GPU_STATE_IDLE;
     cycles = 0;
 
     memory[0] = {`OP_LUI, 3'd0, 8'h12};
@@ -75,7 +80,7 @@ module cpu_tb;
 
     // GPU commands are visible only while their instruction executes.
     reset = 1'b1;
-    memory[0] = {`OP_GLAUNCH, 11'd0};
+    memory[0] = {`OP_GLAUNCH, 11'd23};
     @(posedge clk);
     #1;
     reset = 1'b0;
@@ -84,11 +89,57 @@ module cpu_tb;
     #1;
     if (gpu_command !== gpu_types::GPU_COMMAND_LAUNCH)
       $fatal(1, "GLAUNCH was not forwarded to the CPU GPU-command output");
+    if (gpu_launch_address !== 16'd23)
+      $fatal(1, "GLAUNCH did not forward its start address");
 
     @(posedge clk);
     #1;
     if (gpu_command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "GPU command remained asserted outside EXECUTE");
+    if (gpu_launch_address !== 16'd0)
+      $fatal(1, "GPU launch address remained asserted outside EXECUTE");
+
+    // GWAIT is CPU-local: it stalls while the GPU is running, then resumes
+    // with the following instruction after the GPU broadcasts IDLE.
+    reset = 1'b1;
+    gpu_state = gpu_types::GPU_STATE_RUNNING;
+    memory[0] = {`OP_GWAIT, 11'd0};
+    memory[1] = {`OP_LDI, 3'd0, 8'd77};
+    memory[2] = {`OP_HALT, 11'd0};
+    @(posedge clk);
+    #1;
+    reset = 1'b0;
+
+    @(posedge clk);
+    #1;
+    @(posedge clk);
+    #1;
+    if (dut.control_unit_module.fsm_out_state !== `FSM_GPU_WAIT)
+      $fatal(1, "GWAIT did not stall the CPU while the GPU was running");
+    if (gpu_command !== gpu_types::GPU_COMMAND_NONE)
+      $fatal(1, "GWAIT emitted a GPU command");
+
+    repeat (2) @(posedge clk);
+    #1;
+    if (dut.control_unit_module.fsm_out_state !== `FSM_GPU_WAIT)
+      $fatal(1, "CPU advanced while GPU remained running");
+
+    gpu_state = gpu_types::GPU_STATE_IDLE;
+    @(posedge clk);
+    #1;
+    if (dut.control_unit_module.fsm_out_state !== `FSM_FETCH_DECODE)
+      $fatal(1, "CPU did not leave GWAIT after the GPU became idle");
+
+    cycles = 0;
+    while (!halted && cycles < 20) begin
+      @(posedge clk);
+      cycles = cycles + 1;
+    end
+    #1;
+    if (!halted)
+      $fatal(1, "CPU did not resume and halt after GWAIT");
+    if (dut.datapath.registers.data_out[0] !== 16'd77)
+      $fatal(1, "CPU did not execute the instruction after GWAIT");
 
     $display("cpu_tb passed");
     $finish;

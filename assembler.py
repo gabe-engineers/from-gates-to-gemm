@@ -118,6 +118,8 @@ class Assembler:
             "vdot": descriptor(0x15, scalar, vector, vector),
             "lui": immediate_descriptor(0x16),
             "tid": descriptor(0x17, scalar),
+            "glaunch": jump_descriptor(0x18),
+            "gwait": descriptor(0x19),
         }
 
     def validate(

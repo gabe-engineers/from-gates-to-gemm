@@ -8,7 +8,7 @@ module vector_register_16bit (
 
   always @(posedge clk) begin
     if (reset) data_out <= 128'b0;
-    if (write_enable) data_out <= data_in;
+    else if (write_enable) data_out <= data_in;
   end
 
 

@@ -10,6 +10,7 @@ module control_unit (
     input                                         [15:0] mem_read_data,
     input                                         [15:0] datapath_read_data_a,
     input                                         [15:0] datapath_read_data_b,
+    input gpu_types::gpu_state_t                         gpu_state,
     output wire cpu_types_pkg::control_unit_out_t        out
 );
 
@@ -19,6 +20,7 @@ module control_unit (
   logic cmp_equal_flag;
 
   wire [2:0] fsm_out_state;
+  wire gpu_busy = gpu_state == gpu_types::GPU_STATE_RUNNING;
 
   wire cpu_types_pkg::decoder_out_t decoder_out;
   logic [2:0] vector_lane;
@@ -59,8 +61,11 @@ module control_unit (
   control_fsm fsm (
       .clk   (clk),
       .reset (reset),
+      .enable(1'b1),
       .opcode(decoder_out.opcode),
+      .instruction_valid(1'b1),
       .memory_complete(vector_memory_complete),
+      .gpu_busy(gpu_busy),
       .state(fsm_out_state)
   );
 
@@ -137,6 +142,12 @@ module control_unit (
 
   assign out.gpu_command =
       fsm_out_state == `FSM_EXECUTE ? decoder_out.gpu_command : gpu_types::GPU_COMMAND_NONE;
+
+  // GLAUNCH carries the warp's first instruction address in its addr11 field.
+  // Keep the address meaningful only alongside the one-cycle launch command.
+  assign out.gpu_launch_address =
+      fsm_out_state == `FSM_EXECUTE && decoder_out.opcode == `OP_GLAUNCH ?
+          decoder_out.address : 16'b0;
 
   assign out.halted = fsm_out_state == `FSM_HALT;
 
