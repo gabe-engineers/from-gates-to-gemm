@@ -1,4 +1,5 @@
 `include "chip.sv"
+`include "tb_regs.svh"
 
 module chip_tb;
   logic clk;
@@ -11,6 +12,9 @@ module chip_tb;
   chip dut (
       .clk(clk),
       .reset(reset),
+      .load_enable(1'b0),
+      .load_address(16'b0),
+      .load_data(16'b0),
       .halted(halted)
   );
 
@@ -33,19 +37,19 @@ module chip_tb;
     // The RAM has no external preload port, so this end-to-end program is
     // fixed into its implementation registers. It proves that GLAUNCH's
     // address reaches the warp instruction fetch path through chip.
-    force dut.memory_module.memory_words[0].register.data_out = {`OP_LDI, 3'd0, 8'd7};
-    force dut.memory_module.memory_words[1].register.data_out = {`OP_LDI, 3'd1, 8'd5};
+    force dut.memory_module.memory_words[0].register.data_out = {`OP_LDI, `REG_1, 8'd7};
+    force dut.memory_module.memory_words[1].register.data_out = {`OP_LDI, `REG_2, 8'd5};
     force dut.memory_module.memory_words[2].register.data_out =
-        {`OP_ADD, 3'd2, 3'd0, 3'd1, 2'd0};
+        {`OP_ADD, `REG_3, `REG_1, `REG_2, 2'd0};
     force dut.memory_module.memory_words[3].register.data_out = {`OP_GLAUNCH, 11'd20};
     force dut.memory_module.memory_words[4].register.data_out = {`OP_GWAIT, 11'd5};
     force dut.memory_module.memory_words[5].register.data_out = {`OP_HALT, 11'd0};
 
     // A short scalar/SIMT kernel: TID writes lane IDs to r4, then extra
     // instructions ensure the CPU observes RUNNING and enters GWAIT.
-    force dut.memory_module.memory_words[20].register.data_out = {`OP_TID, 3'd3, 8'd0};
-    force dut.memory_module.memory_words[21].register.data_out = {`OP_LDI, 3'd0, 8'd1};
-    force dut.memory_module.memory_words[22].register.data_out = {`OP_LDI, 3'd1, 8'd2};
+    force dut.memory_module.memory_words[20].register.data_out = {`OP_TID, `REG_4, 8'd0};
+    force dut.memory_module.memory_words[21].register.data_out = {`OP_LDI, `REG_1, 8'd1};
+    force dut.memory_module.memory_words[22].register.data_out = {`OP_LDI, `REG_2, 8'd2};
     force dut.memory_module.memory_words[23].register.data_out = {`OP_HALT, 11'd0};
 
     repeat (2) tick;
@@ -62,7 +66,7 @@ module chip_tb;
 
     if (!halted)
       $fatal(1, "chip did not halt its CPU/GPU integration program");
-    if (dut.cpu_module.datapath.registers.data_out[2] !== 16'd12)
+    if (dut.cpu_module.datapath.registers.data_out[`REG_3] !== 16'd12)
       $fatal(1, "chip CPU produced %0d instead of 12", dut.cpu_module.datapath.registers.data_out[2]);
     if (!saw_gpu_running)
       $fatal(1, "GLAUNCH never transitioned the GPU to RUNNING");
@@ -70,7 +74,7 @@ module chip_tb;
       $fatal(1, "GWAIT did not stall the CPU while the GPU was running");
     if (dut.gpu_module.gpu_state !== gpu_types::GPU_STATE_IDLE)
       $fatal(1, "GPU did not return to IDLE after completing its kernel");
-    if (dut.gpu_module.warp_module.datapath_module.warp_lanes[7].lane_module.reg_file.data_out[3]
+    if (dut.gpu_module.warp_module.datapath_module.warp_lanes[7].lane_module.reg_file.data_out[`REG_4]
         !== 16'd7)
       $fatal(1, "GPU did not execute TID from GLAUNCH address 20");
 

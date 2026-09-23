@@ -3,6 +3,7 @@
 `include "register_file.sv"
 `include "alu.sv"
 `include "warp.sv"
+`include "tb_regs.svh"
 
 module warp_memory_tb;
   logic clk;
@@ -30,7 +31,7 @@ module warp_memory_tb;
 
   for (genvar lane = 0; lane < 8; lane++) begin : observe
     assign lane_result[lane] =
-        dut.datapath_module.warp_lanes[lane].lane_module.reg_file.data_out[4];
+        dut.datapath_module.warp_lanes[lane].lane_module.reg_file.data_out[`REG_5];
   end
 
   warp dut (
@@ -60,10 +61,10 @@ module warp_memory_tb;
     start_address = 16'd0;
     enable = 1'b0;
     for (int index = 0; index < 512; index++) memory[index] = 16'b0;
-    memory[0] = {`OP_LDI, 3'd1, 8'h2A};
-    memory[1] = {`OP_LDI, 3'd2, 8'd5};
-    memory[2] = {`OP_STORE, 3'd2, 3'd1, 5'd0};
-    memory[3] = {`OP_LOAD, 3'd4, 3'd2, 5'd0};
+    memory[0] = {`OP_LDI, `REG_2, 8'h2A};
+    memory[1] = {`OP_LDI, `REG_3, 8'd5};
+    memory[2] = {`OP_STORE, `REG_3, `REG_2, 5'd0};
+    memory[3] = {`OP_LOAD, `REG_5, `REG_3, 5'd0};
     memory[4] = {`OP_HALT, 11'd0};
     tick;
 

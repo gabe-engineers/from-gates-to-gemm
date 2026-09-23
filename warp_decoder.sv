@@ -9,7 +9,7 @@ module warp_decoder (
     output gpu_types::warp_decoder_out_t out
 );
 
-  always @(*) begin
+  always_comb begin
     out = '0;
     out.opcode = instruction_data[15:11];
 

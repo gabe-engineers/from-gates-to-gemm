@@ -1,7 +1,9 @@
 `include "warp_decoder.sv"
+`include "tb_regs.svh"
 
 module warp_decoder_tb;
-  logic [15:0] instruction_data;
+  // Power-up value matches the warp instruction register, which starts at zero.
+  logic [15:0] instruction_data = 16'b0;
   wire gpu_types::warp_decoder_out_t decoder_out;
 
   warp_decoder dut (
@@ -9,6 +11,7 @@ module warp_decoder_tb;
       .out(decoder_out)
   );
 
+  // Unused operand fields are left as 3'd0, since r1 also encodes as zero.
   task expect_valid(input [15:0] instruction, input [4:0] opcode,
                     input [2:0] dst_reg, input [2:0] src_reg_a,
                     input [2:0] src_reg_b, input [15:0] immediate,
@@ -34,21 +37,53 @@ module warp_decoder_tb;
   endtask
 
   initial begin
-    expect_valid({`OP_LDI, 3'd6, 8'hA5}, `OP_LDI, 3'd6, 3'd0, 3'd0, 16'h00A5, 16'd0);
-    expect_valid({`OP_ADD, 3'd1, 3'd2, 3'd3, 2'd0}, `OP_ADD, 3'd1, 3'd2, 3'd3, 16'd0, 16'd0);
-    expect_valid({`OP_TID, 3'd4, 8'd0}, `OP_TID, 3'd4, 3'd0, 3'd0, 16'd0, 16'd0);
+    // Regression: the all-zero instruction must decode before the input ever
+    // changes. The warp IR powers up at zero, so a kernel that starts with
+    // `LDI r1 0` would otherwise see an undefined decoder output.
+    #1;
+    if (decoder_out.valid !== 1'b1 || decoder_out.opcode !== `OP_LDI)
+      $fatal(1, "warp decoder is undefined for the all-zero instruction at power-up");
 
-    expect_valid({`OP_LOAD, 3'd1, 3'd2, 5'd0}, `OP_LOAD, 3'd1, 3'd0, 3'd2, 16'd0, 16'd0);
-    expect_valid({`OP_STORE, 3'd1, 3'd2, 5'd0}, `OP_STORE, 3'd0, 3'd2, 3'd1, 16'd0, 16'd0);
-    expect_valid({`OP_CMP, 3'd1, 3'd2, 5'd0}, `OP_CMP, 3'd0, 3'd1, 3'd2, 16'd0, 16'd0);
-    expect_valid({`OP_JMP, 11'h7FF}, `OP_JMP, 3'd0, 3'd0, 3'd0, 16'd0, 16'h07FF);
-    expect_valid({`OP_JE, 11'h123}, `OP_JE, 3'd0, 3'd0, 3'd0, 16'd0, 16'h0123);
-    expect_valid({`OP_HALT, 11'd0}, `OP_HALT, 3'd0, 3'd0, 3'd0, 16'd0, 16'd0);
+    expect_valid(.instruction({`OP_LDI, `REG_7, 8'hA5}), .opcode(`OP_LDI),
+                 .dst_reg(`REG_7), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'h00A5), .address(16'd0));
 
-    expect_invalid({`OP_VADD, 3'd1, 3'd2, 3'd3, 2'd0});
-    expect_invalid({`OP_VDOT, 3'd1, 3'd2, 3'd3, 2'd0});
-    expect_invalid({`OP_GLAUNCH, 11'd0});
-    expect_invalid({`OP_GWAIT, 11'd0});
+    expect_valid(.instruction({`OP_ADD, `REG_2, `REG_3, `REG_4, 2'd0}), .opcode(`OP_ADD),
+                 .dst_reg(`REG_2), .src_reg_a(`REG_3), .src_reg_b(`REG_4),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_valid(.instruction({`OP_TID, `REG_5, 8'd0}), .opcode(`OP_TID),
+                 .dst_reg(`REG_5), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_valid(.instruction({`OP_LOAD, `REG_2, `REG_3, 5'd0}), .opcode(`OP_LOAD),
+                 .dst_reg(`REG_2), .src_reg_a(3'd0), .src_reg_b(`REG_3),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_valid(.instruction({`OP_STORE, `REG_2, `REG_3, 5'd0}), .opcode(`OP_STORE),
+                 .dst_reg(3'd0), .src_reg_a(`REG_3), .src_reg_b(`REG_2),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_valid(.instruction({`OP_CMP, `REG_2, `REG_3, 5'd0}), .opcode(`OP_CMP),
+                 .dst_reg(3'd0), .src_reg_a(`REG_2), .src_reg_b(`REG_3),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_valid(.instruction({`OP_JMP, 11'h7FF}), .opcode(`OP_JMP),
+                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'd0), .address(16'h07FF));
+
+    expect_valid(.instruction({`OP_JE, 11'h123}), .opcode(`OP_JE),
+                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'd0), .address(16'h0123));
+
+    expect_valid(.instruction({`OP_HALT, 11'd0}), .opcode(`OP_HALT),
+                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'd0), .address(16'd0));
+
+    expect_invalid(.instruction({`OP_VADD, `REG_2, `REG_3, `REG_4, 2'd0}));
+    expect_invalid(.instruction({`OP_VDOT, `REG_2, `REG_3, `REG_4, 2'd0}));
+    expect_invalid(.instruction({`OP_GLAUNCH, 11'd0}));
+    expect_invalid(.instruction({`OP_GWAIT, 11'd0}));
 
     $display("warp_decoder_tb passed");
     $finish;

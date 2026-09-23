@@ -1,4 +1,5 @@
 `include "control_unit.sv"
+`include "tb_regs.svh"
 
 module control_unit_tb;
   logic clk;
@@ -38,9 +39,9 @@ module control_unit_tb;
     datapath_read_data_b = 16'h0042;
     gpu_state = gpu_types::GPU_STATE_IDLE;
     for (int index = 0; index < 16; index++) memory[index] = 16'b0;
-    memory[0] = {`OP_LDI, 3'd0, 8'd42};
+    memory[0] = {`OP_LDI, `REG_1, 8'd42};
     // Internal store layout is source B (address), then source A (value).
-    memory[1] = {`OP_STORE, 3'd1, 3'd2, 5'd0};
+    memory[1] = {`OP_STORE, `REG_2, `REG_3, 5'd0};
     memory[2] = {`OP_HALT, 11'd0};
     tick;
 
@@ -48,7 +49,7 @@ module control_unit_tb;
 
     // FETCH/DECODE -> EXECUTE: LDI control signals are visible.
     tick;
-    if (!out.datapath_write_enable || out.datapath_dst_reg !== 3'd0 ||
+    if (!out.datapath_write_enable || out.datapath_dst_reg !== `REG_1 ||
         out.datapath_immediate !== 16'd42)
       $fatal(1, "control unit did not issue LDI writeback controls");
 
@@ -60,7 +61,7 @@ module control_unit_tb;
     // STORE enters MEMORY without scalar register writeback.
     tick;
     if (out.datapath_write_enable || out.mem_write_enable ||
-        out.datapath_src_reg_a !== 3'd2 || out.datapath_src_reg_b !== 3'd1)
+        out.datapath_src_reg_a !== `REG_3 || out.datapath_src_reg_b !== `REG_2)
       $fatal(1, "control unit decoded STORE controls incorrectly");
     tick;
     if (!out.mem_write_enable || out.mem_addr !== 16'h0042)

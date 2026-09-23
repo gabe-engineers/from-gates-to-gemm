@@ -6,7 +6,7 @@ module decoder (
     output cpu_types_pkg::decoder_out_t out
 );
 
-  always @(*) begin
+  always_comb begin
     out.opcode = instruction_data[15:11];
     out.dst_reg = 3'b000;
     out.src_reg_a = 3'b000;

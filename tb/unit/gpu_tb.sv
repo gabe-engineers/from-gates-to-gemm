@@ -3,6 +3,7 @@
 `include "register_file.sv"
 `include "alu.sv"
 `include "gpu.sv"
+`include "tb_regs.svh"
 
 module gpu_tb;
   logic clk;
@@ -45,9 +46,9 @@ module gpu_tb;
     gpu_dispatch.launch_address = 16'd23;
     for (int index = 0; index < 512; index++)
       instruction_memory[index] = {`OP_HALT, 11'd0};
-    instruction_memory[23] = {`OP_LDI, 3'd0, 8'd1};
+    instruction_memory[23] = {`OP_LDI, `REG_1, 8'd1};
     instruction_memory[24] = {`OP_HALT, 11'd0};
-    instruction_memory[100] = {`OP_LDI, 3'd0, 8'd2};
+    instruction_memory[100] = {`OP_LDI, `REG_1, 8'd2};
     instruction_memory[101] = {`OP_HALT, 11'd0};
     tick;
 

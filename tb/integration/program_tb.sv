@@ -1,6 +1,7 @@
-`include "cpu.sv"
+`include "chip.sv"
 
-// Generic runner for any assembled program.
+// Generic runner for any assembled program, CPU-only or with a GPU kernel
+// launched by GLAUNCH and joined by GWAIT.
 //
 // Assemble a source file first (for example, `python3 assembler.py foo.asm`),
 // then run this testbench with `just test program_tb`.  By default it loads
@@ -11,45 +12,43 @@
 //   +TIMEOUT=10000
 //   +VCD=build/sim/program.vcd
 //
-// It intentionally contains no program-specific input data or assertions.
+// The image is written into the chip RAM through its program-load port while
+// the CPU and GPU are held in reset.  It intentionally contains no
+// program-specific input data or assertions.
 module program_tb;
   logic            clk;
   logic            reset;
-  logic     [15:0] memory           [0:511];
-  wire    [15:0] mem_read_data;
-  wire cpu_types_pkg::cpu_mem_request_t mem_request;
-  wire           halted;
-  integer        index;
-  integer        cycles;
-  integer        max_cycles;
-  integer        program_handle;
-  integer        scan_result;
+  logic            load_enable;
+  logic     [15:0] load_address;
+  logic     [15:0] load_data;
+  wire             halted;
+  integer          index;
+  integer          cycles;
+  integer          max_cycles;
+  integer          program_handle;
+  integer          scan_result;
   logic     [15:0] program_word;
-  string         program_file;
-  string         program_line;
-  string         waveform_file;
+  string           program_file;
+  string           program_line;
+  string           waveform_file;
 
-  cpu dut (
-      .clk             (clk),
-      .reset           (reset),
-      .mem_read_data   (mem_read_data),
-      .gpu_state       (gpu_types::GPU_STATE_IDLE),
-      .mem_request     (mem_request),
-      .halted          (halted)
+  chip dut (
+      .clk         (clk),
+      .reset       (reset),
+      .load_enable (load_enable),
+      .load_address(load_address),
+      .load_data   (load_data),
+      .halted      (halted)
   );
 
-  assign mem_read_data = memory[mem_request.address];
-
   always #5 clk = ~clk;
-
-  always @(posedge clk) begin
-    if (mem_request.write_enable)
-      memory[mem_request.address] <= mem_request.write_data;
-  end
 
   initial begin
     clk = 1'b0;
     reset = 1'b1;
+    load_enable = 1'b0;
+    load_address = 16'b0;
+    load_data = 16'b0;
     cycles = 0;
     max_cycles = 10000;
     program_file = "program.hex";
@@ -63,29 +62,29 @@ module program_tb;
       $dumpvars(0, program_tb);
     end
 
-    for (index = 0; index < 512; index = index + 1) memory[index] = 16'b0;
-
     program_handle = $fopen(program_file, "r");
     if (program_handle == 0) $fatal(1, "could not open program file: %s", program_file);
 
-    // Load one hex word per line, without asking $readmemh to fill the
-    // remainder of RAM (which otherwise produces a warning for short files).
+    // Load one hex word per clock edge into the chip RAM. Reset is asserted
+    // throughout, so neither the CPU nor the GPU touches memory while loading.
     index = 0;
-    while ($fgets(
-        program_line, program_handle
-    )) begin
+    while ($fgets(program_line, program_handle)) begin
       if (index >= 512) $fatal(1, "program exceeds the 512-word RAM: %s", program_file);
 
       scan_result = $sscanf(program_line, "%h", program_word);
       if (scan_result != 1) $fatal(1, "invalid hex word in program file: %s", program_file);
 
-      memory[index] = program_word;
+      load_enable  = 1'b1;
+      load_address = index;
+      load_data    = program_word;
+      @(posedge clk);
       index = index + 1;
     end
     $fclose(program_handle);
+    load_enable = 1'b0;
     $display("Loaded %0d program words from %s.", index, program_file);
 
-    // Reset the PC, instruction register, and register files before fetch.
+    // Release reset and run until the CPU halts (after any GWAIT completes).
     repeat (2) @(posedge clk);
     reset = 1'b0;
 
@@ -102,8 +101,8 @@ module program_tb;
     $display(
         "r%0d = 0x%04h (%0d)",
         index + 1,
-        dut.datapath.registers.data_out[index],
-        dut.datapath.registers.data_out[index]
+        dut.cpu_module.datapath.registers.data_out[index],
+        dut.cpu_module.datapath.registers.data_out[index]
     );
     $finish;
   end

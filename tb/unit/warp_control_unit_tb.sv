@@ -1,6 +1,7 @@
 `include "register.sv"
 `include "control_fsm.sv"
 `include "warp_control_unit.sv"
+`include "tb_regs.svh"
 
 module warp_control_unit_tb;
   logic clk;
@@ -37,7 +38,7 @@ module warp_control_unit_tb;
     enable = 1'b1;
     lane_status.operands_equal = 1'b1;
     lane_status.diverged = 1'b0;
-    mem_read_data = {`OP_TID, 3'd6, 8'd0};
+    mem_read_data = {`OP_TID, `REG_7, 8'd0};
     tick;
 
     reset = 1'b0;
@@ -47,7 +48,7 @@ module warp_control_unit_tb;
     if (control_out.instruction_address !== 16'd23)
       $fatal(1, "warp did not start from the supplied instruction address");
 
-    if (control_out.warp_request.dst_reg !== 3'd6)
+    if (control_out.warp_request.dst_reg !== `REG_7)
       $fatal(1, "TID destination register was not decoded");
     if (control_out.warp_request.writeback_source !== control_helpers_pkg::WB_THREAD_ID)
       $fatal(1, "TID did not select the thread-ID writeback source");
@@ -57,7 +58,7 @@ module warp_control_unit_tb;
     // CPU vector opcodes are invalid in the scalar/SIMT warp ISA. They must
     // halt the warp rather than becoming a silent no-op.
     reset = 1'b1;
-    mem_read_data = {`OP_VADD, 3'd0, 3'd1, 3'd2, 2'd0};
+    mem_read_data = {`OP_VADD, `VREG_1, `VREG_2, `VREG_3, 2'd0};
     tick;
     reset = 1'b0;
     tick;
@@ -71,7 +72,7 @@ module warp_control_unit_tb;
 
     reset = 1'b1;
     start_address = 16'd23;
-    mem_read_data = {`OP_CMP, 3'd1, 3'd2, 5'd0};
+    mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};
     lane_status.operands_equal = 1'b1;
     lane_status.diverged = 1'b0;
     tick;
@@ -94,7 +95,7 @@ module warp_control_unit_tb;
       $fatal(1, "JE did not redirect the warp PC");
 
     reset = 1'b1;
-    mem_read_data = {`OP_CMP, 3'd1, 3'd2, 5'd0};
+    mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};
     lane_status.diverged = 1'b1;
     tick;
     reset = 1'b0;

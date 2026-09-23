@@ -3,6 +3,7 @@
 `include "register_file.sv"
 `include "alu.sv"
 `include "warp.sv"
+`include "tb_regs.svh"
 
 module warp_tb;
   logic clk;
@@ -49,9 +50,9 @@ module warp_tb;
     enable = 1'b0;
     for (int index = 0; index < 512; index++)
       instruction_memory[index] = {`OP_HALT, 11'd0};
-    instruction_memory[23] = {`OP_TID, 3'd3, 8'd0};
+    instruction_memory[23] = {`OP_TID, `REG_4, 8'd0};
     instruction_memory[24] = {`OP_HALT, 11'd0};
-    instruction_memory[100] = {`OP_TID, 3'd4, 8'd0};
+    instruction_memory[100] = {`OP_TID, `REG_5, 8'd0};
     tick;
 
     reset = 1'b0;

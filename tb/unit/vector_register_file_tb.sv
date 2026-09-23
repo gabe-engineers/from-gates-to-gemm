@@ -1,4 +1,5 @@
 `include "vector_register_file.sv"
+`include "tb_regs.svh"
 
 module vector_register_file_tb;
   logic         clk;
@@ -46,6 +47,7 @@ module vector_register_file_tb;
     end
   endtask
 
+  // The first argument is a vector register address; the second is a lane.
   task expect_lane(input [2:0] expected_addr, input [2:0] expected_lane,
                    input [15:0] expected_data);
     begin
@@ -61,63 +63,63 @@ module vector_register_file_tb;
   initial begin
     reset = 1'b1;
     write_enable = 1'b0;
-    write_addr = 3'd0;
+    write_addr = `VREG_1;
     write_lane = 3'd0;
     write_data = 16'd0;
-    read_addr = 3'd0;
+    read_addr = `VREG_1;
     read_lane = 3'd0;
     vector_alu_write_enable = 1'b0;
-    vector_alu_write_addr = 3'd0;
+    vector_alu_write_addr = `VREG_1;
     vector_alu_write_data = 128'd0;
-    vector_alu_read_addr_a = 3'd0;
-    vector_alu_read_addr_b = 3'd0;
+    vector_alu_read_addr_a = `VREG_1;
+    vector_alu_read_addr_b = `VREG_1;
     tick;
 
     reset = 1'b0;
-    expect_lane(3'd0, 3'd0, 16'd0);
-    expect_lane(3'd7, 3'd7, 16'd0);
+    expect_lane(`VREG_1, 3'd0, 16'd0);
+    expect_lane(`VREG_8, 3'd7, 16'd0);
 
     write_enable = 1'b1;
-    write_addr = 3'd0;
+    write_addr = `VREG_1;
     write_lane = 3'd0;
     write_data = 16'h1111;
     tick;
 
-    write_addr = 3'd0;
+    write_addr = `VREG_1;
     write_lane = 3'd7;
     write_data = 16'h7777;
     tick;
 
-    write_addr = 3'd1;
+    write_addr = `VREG_2;
     write_lane = 3'd0;
     write_data = 16'h2222;
     tick;
 
-    expect_lane(3'd0, 3'd0, 16'h1111);
-    expect_lane(3'd0, 3'd7, 16'h7777);
-    expect_lane(3'd1, 3'd0, 16'h2222);
-    expect_lane(3'd1, 3'd7, 16'd0);
+    expect_lane(`VREG_1, 3'd0, 16'h1111);
+    expect_lane(`VREG_1, 3'd7, 16'h7777);
+    expect_lane(`VREG_2, 3'd0, 16'h2222);
+    expect_lane(`VREG_2, 3'd7, 16'd0);
 
     write_enable = 1'b0;
-    write_addr = 3'd0;
+    write_addr = `VREG_1;
     write_lane = 3'd0;
     write_data = 16'hFFFF;
     tick;
-    expect_lane(3'd0, 3'd0, 16'h1111);
+    expect_lane(`VREG_1, 3'd0, 16'h1111);
 
     // A vector ALU write updates all eight lanes of the selected vector register.
     vector_alu_write_enable = 1'b1;
-    vector_alu_write_addr = 3'd2;
+    vector_alu_write_addr = `VREG_3;
     vector_alu_write_data = 128'h0008_0007_0006_0005_0004_0003_0002_0001;
     tick;
     vector_alu_write_enable = 1'b0;
-    expect_lane(3'd2, 3'd0, 16'h0001);
-    expect_lane(3'd2, 3'd3, 16'h0004);
-    expect_lane(3'd2, 3'd7, 16'h0008);
-    expect_lane(3'd0, 3'd0, 16'h1111);
+    expect_lane(`VREG_3, 3'd0, 16'h0001);
+    expect_lane(`VREG_3, 3'd3, 16'h0004);
+    expect_lane(`VREG_3, 3'd7, 16'h0008);
+    expect_lane(`VREG_1, 3'd0, 16'h1111);
 
-    vector_alu_read_addr_a = 3'd2;
-    vector_alu_read_addr_b = 3'd0;
+    vector_alu_read_addr_a = `VREG_3;
+    vector_alu_read_addr_b = `VREG_1;
     #1;
     if (vector_alu_read_data_a[15:0] !== 16'h0001 ||
         vector_alu_read_data_a[127:112] !== 16'h0008 ||
@@ -126,9 +128,9 @@ module vector_register_file_tb;
 
     reset = 1'b1;
     tick;
-    expect_lane(3'd0, 3'd0, 16'd0);
-    expect_lane(3'd0, 3'd7, 16'd0);
-    expect_lane(3'd1, 3'd0, 16'd0);
+    expect_lane(`VREG_1, 3'd0, 16'd0);
+    expect_lane(`VREG_1, 3'd7, 16'd0);
+    expect_lane(`VREG_2, 3'd0, 16'd0);
 
     $finish;
   end

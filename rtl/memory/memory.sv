@@ -6,6 +6,11 @@ module memory (
     input                                            clk,
     input  cpu_types_pkg::cpu_mem_request_t           cpu_mem_request,
     input  gpu_types::warp_mem_request_t                 gpu_mem_request,
+    // Program load port: one word per clock while the CPU and GPU are held in
+    // reset. It has priority over both run-time write ports.
+    input                                            load_enable,
+    input                                     [15:0] load_address,
+    input                                     [15:0] load_data,
     output                                    [15:0] cpu_read_data,
     output gpu_types::warp_mem_response_t            gpu_read_response
 );
@@ -18,8 +23,11 @@ module memory (
   generate
     for (genvar i = 0; i < 512; i++) begin : memory_words
       wire cpu_writes_this_word;
+      wire load_writes_this_word;
       wire [7:0] gpu_writes_this_word;
       wire [15:0] gpu_write_data_this_word;
+
+      assign load_writes_this_word = load_enable && (load_address == i);
 
       assign cpu_writes_this_word =
           cpu_mem_request.write_enable && (cpu_mem_request.address == i);
@@ -44,9 +52,11 @@ module memory (
       register register (
           .clk(clk),
           .reset(1'b0),
-          .write_enable(cpu_writes_this_word || |gpu_writes_this_word),
-          // CPU wins if both ports write the same word on the same clock edge.
+          .write_enable(cpu_writes_this_word || |gpu_writes_this_word || load_writes_this_word),
+          // Priority: program load, then CPU, then GPU. The CPU wins if both
+          // run-time ports write the same word on the same clock edge.
           .data_in(
+              load_writes_this_word ? load_data :
               cpu_writes_this_word ? cpu_mem_request.write_data : gpu_write_data_this_word
           ),
           .data_out(register_out[i])

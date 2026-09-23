@@ -1,4 +1,5 @@
 `include "datapath.sv"
+`include "tb_regs.svh"
 
 module datapath_16bit_tb;
   logic         clk;
@@ -80,113 +81,113 @@ module datapath_16bit_tb;
     // ------------------------------------------------------------
     test_case(.test_number(0), .tc_reset(1), .tc_write_enable(0),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd0), .tc_read_addr_b(3'd1),
-              .tc_write_addr(3'd0), .expected_write_reg_data(16'd0));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_1), .tc_read_addr_b(`REG_2),
+              .tc_write_addr(`REG_1), .expected_write_reg_data(16'd0));
 
 
     // ------------------------------------------------------------
     // Load two different registers with immediates
-    // r1 = 12
+    // r2 = 12
     // ------------------------------------------------------------
     test_case(.test_number(1), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_IMMEDIATE),
               .tc_alu_op(`ALU_OP_ADD),  // don't care
-              .tc_immediate(16'd12), .tc_read_addr_a(3'd0),  // don't care
-              .tc_read_addr_b(3'd0),  // don't care
-              .tc_write_addr(3'd1), .expected_write_reg_data(16'd12));
+              .tc_immediate(16'd12), .tc_read_addr_a(`REG_1),  // don't care
+              .tc_read_addr_b(`REG_1),  // don't care
+              .tc_write_addr(`REG_2), .expected_write_reg_data(16'd12));
 
-    // r2 = 7
+    // r3 = 7
     test_case(.test_number(2), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_IMMEDIATE), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd7), .tc_read_addr_a(3'd0), .tc_read_addr_b(3'd0),
-              .tc_write_addr(3'd2), .expected_write_reg_data(16'd7));
+              .tc_immediate(16'd7), .tc_read_addr_a(`REG_1), .tc_read_addr_b(`REG_1),
+              .tc_write_addr(`REG_3), .expected_write_reg_data(16'd7));
 
 
     // ------------------------------------------------------------
-    // r3 = r1 + r2 = 19
+    // r4 = r2 + r3 = 19
     // ------------------------------------------------------------
     test_case(.test_number(3), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd1), .tc_read_addr_b(3'd2),
-              .tc_write_addr(3'd3), .expected_write_reg_data(16'd19));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_2), .tc_read_addr_b(`REG_3),
+              .tc_write_addr(`REG_4), .expected_write_reg_data(16'd19));
 
 
     // ------------------------------------------------------------
-    // Prove that r3 really got written:
-    // r4 = r3 - r2 = 12
+    // Prove that r4 really got written:
+    // r5 = r4 - r3 = 12
     // ------------------------------------------------------------
     test_case(.test_number(4), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_SUB),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd3), .tc_read_addr_b(3'd2),
-              .tc_write_addr(3'd4), .expected_write_reg_data(16'd12));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_4), .tc_read_addr_b(`REG_3),
+              .tc_write_addr(`REG_5), .expected_write_reg_data(16'd12));
 
 
     // ------------------------------------------------------------
     // Underflow:
-    // r5 = r2 - r1 = 7 - 12 = -5 = 65531 in 16 bits
+    // r6 = r3 - r2 = 7 - 12 = -5 = 65531 in 16 bits
     // ------------------------------------------------------------
     test_case(.test_number(5), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_SUB),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd2), .tc_read_addr_b(3'd1),
-              .tc_write_addr(3'd5), .expected_write_reg_data(16'd65531));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_3), .tc_read_addr_b(`REG_2),
+              .tc_write_addr(`REG_6), .expected_write_reg_data(16'd65531));
 
 
     // ------------------------------------------------------------
     // Bitwise operation:
-    // r6 = 12 XOR 7 = 11
+    // r7 = 12 XOR 7 = 11
     // ------------------------------------------------------------
     test_case(.test_number(6), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_XOR),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd1), .tc_read_addr_b(3'd2),
-              .tc_write_addr(3'd6), .expected_write_reg_data(16'd11));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_2), .tc_read_addr_b(`REG_3),
+              .tc_write_addr(`REG_7), .expected_write_reg_data(16'd11));
 
 
     // ------------------------------------------------------------
     // write_enable = 0.
-    // ALU computes 19, but r7 must NOT receive it, so write_reg_data remains zero.
+    // ALU computes 19, but r8 must NOT receive it, so write_reg_data remains zero.
     // ------------------------------------------------------------
     test_case(.test_number(7), .tc_reset(0), .tc_write_enable(0),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd1), .tc_read_addr_b(3'd2),
-              .tc_write_addr(3'd7), .expected_write_reg_data(16'd0));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_2), .tc_read_addr_b(`REG_3),
+              .tc_write_addr(`REG_8), .expected_write_reg_data(16'd0));
 
 
     // ------------------------------------------------------------
-    // Now use r7. Since previous write was disabled,
-    // r7 should still be zero.
-    // r0 = r7 + r7 = 0
+    // Now use r8. Since previous write was disabled,
+    // r8 should still be zero.
+    // r1 = r8 + r8 = 0
     // ------------------------------------------------------------
     test_case(.test_number(8), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd7), .tc_read_addr_b(3'd7),
-              .tc_write_addr(3'd0), .expected_write_reg_data(16'd0));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_8), .tc_read_addr_b(`REG_8),
+              .tc_write_addr(`REG_1), .expected_write_reg_data(16'd0));
 
 
     // ------------------------------------------------------------
     // Overwrite an existing register:
-    // r1 = 200
+    // r2 = 200
     // ------------------------------------------------------------
     test_case(.test_number(9), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_IMMEDIATE), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd200), .tc_read_addr_a(3'd0), .tc_read_addr_b(3'd0),
-              .tc_write_addr(3'd1), .expected_write_reg_data(16'd200));
+              .tc_immediate(16'd200), .tc_read_addr_a(`REG_1), .tc_read_addr_b(`REG_1),
+              .tc_write_addr(`REG_2), .expected_write_reg_data(16'd200));
 
 
     // ------------------------------------------------------------
     // Verify overwrite:
-    // r0 = r1 + r2 = 200 + 7 = 207
+    // r1 = r2 + r3 = 200 + 7 = 207
     // ------------------------------------------------------------
     test_case(.test_number(10), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_ALU), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd1), .tc_read_addr_b(3'd2),
-              .tc_write_addr(3'd0), .expected_write_reg_data(16'd207));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_2), .tc_read_addr_b(`REG_3),
+              .tc_write_addr(`REG_1), .expected_write_reg_data(16'd207));
 
-    // The third writeback source zero-extends the local thread ID.
+    // The third writeback source zero-extends the local thread ID into r8.
     thread_id = 3'd5;
     test_case(.test_number(11), .tc_reset(0), .tc_write_enable(1),
               .tc_writeback_source(WRITEBACK_SOURCE_THREAD_ID), .tc_alu_op(`ALU_OP_ADD),
-              .tc_immediate(16'd0), .tc_read_addr_a(3'd0), .tc_read_addr_b(3'd0),
-              .tc_write_addr(3'd7), .expected_write_reg_data(16'd5));
+              .tc_immediate(16'd0), .tc_read_addr_a(`REG_1), .tc_read_addr_b(`REG_1),
+              .tc_write_addr(`REG_8), .expected_write_reg_data(16'd5));
 
     $display("Tests finished");
     $finish;

@@ -7,6 +7,10 @@
 module chip (
     input  clk,
     input  reset,
+    // Program load port, wired straight to the RAM. Hold reset while loading.
+    input  load_enable,
+    input  [15:0] load_address,
+    input  [15:0] load_data,
     output halted
 );
 
@@ -42,7 +46,10 @@ module chip (
       .cpu_mem_request(cpu_mem_request),
       .cpu_read_data(cpu_mem_read_data),
       .gpu_read_response(gpu_mem_response),
-      .gpu_mem_request(gpu_mem_request)
+      .gpu_mem_request(gpu_mem_request),
+      .load_enable(load_enable),
+      .load_address(load_address),
+      .load_data(load_data)
   );
 
 endmodule

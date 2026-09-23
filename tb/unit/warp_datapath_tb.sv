@@ -2,6 +2,7 @@
 `include "alu.sv"
 `include "control_helpers.svh"
 `include "warp_datapath.sv"
+`include "tb_regs.svh"
 
 module warp_datapath_tb;
   logic clk;
@@ -40,15 +41,15 @@ module warp_datapath_tb;
     tick;
     reset = 1'b0;
 
-    // TID writes each lane's fixed, zero-extended ID into r3.
-    warp_request.dst_reg = 3'd3;
+    // TID writes each lane's fixed, zero-extended ID into r4.
+    warp_request.dst_reg = `REG_4;
     warp_request.write_enable = 1'b1;
     warp_request.writeback_source = control_helpers_pkg::WB_THREAD_ID;
     tick;
 
-    // Read r3 back through MOV, proving the selected TID value was written.
+    // Read r4 back through MOV, proving the selected TID value was written.
     warp_request.write_enable = 1'b0;
-    warp_request.src_reg_a = 3'd3;
+    warp_request.src_reg_a = `REG_4;
     warp_request.alu_op = `ALU_OP_MOV;
     warp_request.writeback_source = control_helpers_pkg::WB_ALU;
     #1;
@@ -60,27 +61,27 @@ module warp_datapath_tb;
 
     warp_request.write_enable = 1'b1;
     warp_request.writeback_source = control_helpers_pkg::WB_IMMEDIATE;
-    warp_request.dst_reg = 3'd4;
+    warp_request.dst_reg = `REG_5;
     warp_request.immediate = 16'hFFFF;
     tick;
-    warp_request.dst_reg = 3'd5;
+    warp_request.dst_reg = `REG_6;
     warp_request.immediate = 16'h0000;
     tick;
     warp_request.write_enable = 1'b0;
     warp_request.writeback_source = control_helpers_pkg::WB_ALU;
 
-    warp_request.src_reg_a = 3'd3;
-    warp_request.src_reg_b = 3'd3;
+    warp_request.src_reg_a = `REG_4;
+    warp_request.src_reg_b = `REG_4;
     #1;
     if (!lane_status.operands_equal || lane_status.diverged)
       $fatal(1, "identical operands did not produce a uniform equal result");
 
-    warp_request.src_reg_b = 3'd4;
+    warp_request.src_reg_b = `REG_5;
     #1;
     if (lane_status.operands_equal || lane_status.diverged)
       $fatal(1, "all-unequal lanes were not reported as uniform");
 
-    warp_request.src_reg_b = 3'd5;
+    warp_request.src_reg_b = `REG_6;
     #1;
     if (!lane_status.diverged || lane_status.operands_equal)
       $fatal(1, "mixed lane equality was not reported as divergence");

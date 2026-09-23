@@ -1,5 +1,5 @@
 sim_dir := "build/sim"
-rtl_include_dirs := "-Irtl/include -Irtl/lib -Irtl/cpu -Irtl/memory -Irtl/top"
+include_dirs := "-Irtl/include -Irtl/lib -Irtl/cpu -Irtl/memory -Irtl/top -Itb/include"
 
 default: test-all
 
@@ -16,7 +16,7 @@ test target:
       printf '%s\n' "Unknown testbench: {{target}}" >&2
       exit 1
     fi
-    iverilog -g2012 {{rtl_include_dirs}} -o {{sim_dir}}/{{target}} "$testbench"
+    iverilog -g2012 {{include_dirs}} -o {{sim_dir}}/{{target}} "$testbench"
     vvp {{sim_dir}}/{{target}}
 
 # Assemble an arbitrary source program and run it in the generic CPU harness.
@@ -31,9 +31,9 @@ test-dotproduct:
 # Assemble and run the checked-in SIMD dot-product program.
 test-dotproduct-simd:
     just run-program dot_product_simd.asm
-# Assemble and run the checked-in GPU dot-product program.
-test-dotproduct-gpu:
-    just run-program dot-product-gpu.asm
+# Assemble and run the checked-in SIMT GPU dot-product program.
+test-dotproduct-simt:
+    just run-program dot-product-simt.asm
 
 synth-check:
     sh scripts/synth_check.sh

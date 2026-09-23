@@ -19,7 +19,10 @@ module memory_tb;
       .cpu_mem_request  (cpu_mem_request),
       .cpu_read_data    (cpu_read_data),
       .gpu_mem_request  (gpu_mem_request),
-      .gpu_read_response(gpu_read_response)
+      .gpu_read_response(gpu_read_response),
+      .load_enable      (1'b0),
+      .load_address     (16'b0),
+      .load_data        (16'b0)
   );
 
   assign gpu_mem_request.write_enable = gpu_write_enable;
