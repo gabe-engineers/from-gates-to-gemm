@@ -119,7 +119,7 @@ class Assembler:
             "lui": immediate_descriptor(0x16),
             "tid": descriptor(0x17, scalar),
             "glaunch": jump_descriptor(0x18),
-            "gwait": descriptor(0x19),
+            "gwait": jump_descriptor(0x19),
         }
 
     def validate(

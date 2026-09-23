@@ -41,7 +41,7 @@ VALID_INSTRUCTION_CASES = (
     ("lui r8 255", "B7FF", (0x16, 7, 0, 0, 0xFF00, 0)),
     ("tid r8", "BF00", (0x17, 7, 0, 0, 0, 0)),
     ("glaunch 23", "C017", (0x18, 0, 0, 0, 0, 23)),
-    ("gwait", "C800", (0x19, 0, 0, 0, 0, 0)),
+    ("gwait 23", "C817", (0x19, 0, 0, 0, 0, 23)),
 )
 
 
@@ -64,7 +64,7 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         dst, immediate = (word >> 8) & 7, (word & 0xFF) << 8
     elif opcode == 0x17:
         dst = (word >> 8) & 7
-    elif opcode in (0x0D, 0x0E, 0x18):
+    elif opcode in (0x0D, 0x0E, 0x18, 0x19):
         address = word & 0x7FF
     return opcode, dst, src_a, src_b, immediate, address
 
@@ -123,9 +123,10 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
     def test_immediate_and_jump_boundaries(self) -> None:
         self.assertEqual(
             self.assemble(
-                "ldi r1 0\nldi r1 255\nlui r1 0\nlui r1 255\njmp 0\nje 2047\nglaunch 2047\n"
+                "ldi r1 0\nldi r1 255\nlui r1 0\nlui r1 255\njmp 0\nje 2047\n"
+                "glaunch 2047\ngwait 0\ngwait 2047\n"
             ),
-            ["0000", "00FF", "B000", "B0FF", "6800", "77FF", "C7FF"],
+            ["0000", "00FF", "B000", "B0FF", "6800", "77FF", "C7FF", "C800", "CFFF"],
         )
         for source in (
             "ldi r1 256\n",
@@ -136,6 +137,8 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "jmp -1\n",
             "glaunch 2048\n",
             "glaunch -1\n",
+            "gwait 2048\n",
+            "gwait -1\n",
         ):
             with self.subTest(source=source):
                 self.assert_fails(source)
@@ -149,6 +152,7 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             "vdot v1 v2 v3\n",
             "store r1\n",
             "glaunch\n",
+            "gwait\n",
             "gwait r1\n",
             "tid r0\n",
             "halt_or_vector\n",

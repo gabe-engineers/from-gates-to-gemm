@@ -55,10 +55,12 @@ module decoder_tb;
     if (decoder_out.address !== 16'd23)
       $fatal(1, "GLAUNCH did not decode its start address");
 
-    instruction_data = {`OP_GWAIT, 11'd0};
+    instruction_data = {`OP_GWAIT, 11'd23};
     #1;
     if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "GWAIT incorrectly emitted a GPU command");
+    if (decoder_out.address !== 16'd23)
+      $fatal(1, "GWAIT did not decode its resume address");
 
     $display("decoder_tb passed");
     $finish;

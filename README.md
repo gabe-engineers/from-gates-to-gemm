@@ -107,7 +107,7 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x16` | `LUI rd imm8` | Load `imm8` into bits 15:8 and clear bits 7:0 |
 | `0x17` | `TID rd` | Write the executing thread ID (the scalar CPU always writes zero) |
 | `0x18` | `GLAUNCH addr11` | Start GPU execution at `addr11` if the GPU is idle; no-op while it is running |
-| `0x19` | `GWAIT` | Stall the scalar CPU until the GPU is idle |
+| `0x19` | `GWAIT addr11` | Stall the scalar CPU until the GPU is idle, then jump to `addr11` |
 | `0x1A–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
 Unsupported opcodes stop the current CPU implementation without side effects.
@@ -115,7 +115,9 @@ Unsupported opcodes stop the current CPU implementation without side effects.
 The GPU reports registered `IDLE`/`RUNNING` state to the CPU. `GLAUNCH` is a
 one-cycle command accepted only in `IDLE`; its zero-extended `addr11` operand
 becomes the warp's first instruction address. `GWAIT` is CPU-local and sends
-no command to the GPU.
+no command to the GPU; after the GPU reports `IDLE` it resumes the CPU at its
+zero-extended `addr11` operand. This makes the wait skip over an inline GPU
+kernel, so a program can lay out the CPU and warp code in one image.
 
 Warp code uses a scalar/SIMT subset: `LDI`, `LUI`, `MOV`, scalar arithmetic,
 `TID`, and `HALT`. Each supported instruction is broadcast across the warp's
@@ -138,7 +140,7 @@ All reserved bits must be zero in assembler output.
 | Two registers | `opcode[5] A[3] B[3] reserved[5]` |
 | One register | `opcode[5] A[3] reserved[8]` |
 | Immediate | `opcode[5] rd[3] immediate[8]` |
-| Jump | `opcode[5] address[11]` (`JMP`, `JE`, and `GLAUNCH`) |
+| Jump | `opcode[5] address[11]` (`JMP`, `JE`, `GLAUNCH`, and `GWAIT`) |
 | No operands | `opcode[5] reserved[11]` |
 
 Registers use zero-based three-bit encodings internally: assembly register `r1`

@@ -38,7 +38,7 @@ module chip_tb;
     force dut.memory_module.memory_words[2].register.data_out =
         {`OP_ADD, 3'd2, 3'd0, 3'd1, 2'd0};
     force dut.memory_module.memory_words[3].register.data_out = {`OP_GLAUNCH, 11'd20};
-    force dut.memory_module.memory_words[4].register.data_out = {`OP_GWAIT, 11'd0};
+    force dut.memory_module.memory_words[4].register.data_out = {`OP_GWAIT, 11'd5};
     force dut.memory_module.memory_words[5].register.data_out = {`OP_HALT, 11'd0};
 
     // A short scalar/SIMT kernel: TID writes lane IDs to r4, then extra

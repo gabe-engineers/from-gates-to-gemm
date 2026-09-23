@@ -109,10 +109,19 @@ module control_unit (
   // The PC advances when the current instruction completes execution.
   assign advance_pc = fsm_out_state == `FSM_EXECUTE;
 
+  // GWAIT stalls until the GPU is idle and then loads its addr11 operand into
+  // the PC. The IR still holds GWAIT across GPU_WAIT, so the resume address
+  // remains valid on the cycle the wait completes.
+  wire is_gwait = decoder_out.opcode == `OP_GWAIT;
+  wire gwait_resume =
+      is_gwait && !gpu_busy &&
+      (fsm_out_state == `FSM_EXECUTE || fsm_out_state == `FSM_GPU_WAIT);
+
   assign write_enable_pc =
-      fsm_out_state == `FSM_EXECUTE &&
-      (decoder_out.opcode == `OP_JMP ||
-       (decoder_out.opcode == `OP_JE && cmp_equal_flag));
+      (fsm_out_state == `FSM_EXECUTE &&
+       (decoder_out.opcode == `OP_JMP ||
+        (decoder_out.opcode == `OP_JE && cmp_equal_flag))) ||
+      gwait_resume;
 
   assign out.mem_write_enable = fsm_out_state == `FSM_MEMORY &&
       (decoder_out.opcode == `OP_STORE || decoder_out.opcode == `OP_VST);

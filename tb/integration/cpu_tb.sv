@@ -99,11 +99,11 @@ module cpu_tb;
     if (gpu_launch_address !== 16'd0)
       $fatal(1, "GPU launch address remained asserted outside EXECUTE");
 
-    // GWAIT is CPU-local: it stalls while the GPU is running, then resumes
-    // with the following instruction after the GPU broadcasts IDLE.
+    // GWAIT is CPU-local: it stalls while the GPU is running, then jumps to
+    // its addr11 operand after the GPU broadcasts IDLE.
     reset = 1'b1;
     gpu_state = gpu_types::GPU_STATE_RUNNING;
-    memory[0] = {`OP_GWAIT, 11'd0};
+    memory[0] = {`OP_GWAIT, 11'd1};
     memory[1] = {`OP_LDI, 3'd0, 8'd77};
     memory[2] = {`OP_HALT, 11'd0};
     @(posedge clk);

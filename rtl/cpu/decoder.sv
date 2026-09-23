@@ -68,8 +68,11 @@ module decoder (
       end
 
       // GWAIT is handled wholly by the CPU control FSM. It does not send a
-      // command to the GPU; the CPU waits on the GPU's registered state.
-      `OP_GWAIT: begin end
+      // command to the GPU; the CPU waits on the GPU's registered state and
+      // then resumes at the zero-extended addr11 field.
+      `OP_GWAIT: begin
+        out.address = {5'b0, instruction_data[10:0]};
+      end
     endcase
   end
 endmodule

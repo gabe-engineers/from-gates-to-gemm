@@ -31,6 +31,9 @@ test-dotproduct:
 # Assemble and run the checked-in SIMD dot-product program.
 test-dotproduct-simd:
     just run-program dot_product_simd.asm
+# Assemble and run the checked-in GPU dot-product program.
+test-dotproduct-gpu:
+    just run-program dot-product-gpu.asm
 
 synth-check:
     sh scripts/synth_check.sh
