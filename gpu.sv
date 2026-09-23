@@ -4,20 +4,19 @@
 module gpu (
     input clk,
     input reset,
-    input [7:0][15:0] mem_read_data,
-    input gpu_types::gpu_command_t gpu_command,
-    input [15:0] gpu_launch_address,
+    input gpu_types::gpu_mem_response_t mem_response,
+    input gpu_types::gpu_dispatch_t gpu_dispatch,
     output gpu_types::gpu_state_t gpu_state,
-    output gpu_types::warp_mem_request gpu_mem_request
+    output gpu_types::gpu_mem_request_t gpu_mem_request
 );
 
   wire warp_enabled = gpu_state == gpu_types::GPU_STATE_RUNNING;
   wire launch_accepted =
       !reset &&
       gpu_state == gpu_types::GPU_STATE_IDLE &&
-      gpu_command == gpu_types::GPU_COMMAND_LAUNCH;
+      gpu_dispatch.command == gpu_types::GPU_COMMAND_LAUNCH;
   wire warp_halted;
-  wire gpu_types::warp_mem_request raw_warp_mem_request;
+  wire gpu_types::gpu_mem_request_t raw_warp_mem_request;
 
   // The GPU owns dispatch lifetime. A command only starts an idle GPU;
   // another launch while work is active is deliberately a no-op.
@@ -26,7 +25,7 @@ module gpu (
       gpu_state <= gpu_types::GPU_STATE_IDLE;
     else case (gpu_state)
       gpu_types::GPU_STATE_IDLE: begin
-        if (gpu_command == gpu_types::GPU_COMMAND_LAUNCH)
+        if (gpu_dispatch.command == gpu_types::GPU_COMMAND_LAUNCH)
           gpu_state <= gpu_types::GPU_STATE_RUNNING;
       end
       gpu_types::GPU_STATE_RUNNING: begin
@@ -40,9 +39,9 @@ module gpu (
       .clk(clk),
       .reset(reset),
       .start(launch_accepted),
-      .start_address(gpu_launch_address),
+      .start_address(gpu_dispatch.launch_address),
       .enable(warp_enabled),
-      .mem_read_data(mem_read_data),
+      .mem_response(mem_response),
       .halted(warp_halted),
       .warp_mem_request(raw_warp_mem_request)
   );

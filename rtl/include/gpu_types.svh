@@ -3,27 +3,29 @@
 
 package gpu_types;
 
-  // Commands emitted by the scalar decoder to coordinate GPU work.
-  typedef enum logic [1:0] {
-    GPU_COMMAND_NONE   = 2'b00,
-    GPU_COMMAND_LAUNCH = 2'b01
+  typedef enum logic {
+    GPU_COMMAND_NONE   = 1'b0,
+    GPU_COMMAND_LAUNCH = 1'b1
   } gpu_command_t;
+
+  typedef struct packed {
+    gpu_command_t command;
+    logic [15:0]  launch_address;
+  } gpu_dispatch_t;
 
   typedef enum logic {
     GPU_STATE_IDLE    = 1'b0,
     GPU_STATE_RUNNING = 1'b1
   } gpu_state_t;
 
-  // The scalar/SIMT instruction subset understood by a warp. The opcode
-  // preserves the shared ISA encoding, while valid distinguishes unsupported
-  // CPU-only instructions from supported no-operand instructions such as HALT.
   typedef struct packed {
     logic        valid;
-    logic [ 4:0] opcode;
-    logic [ 2:0] dst_reg;
-    logic [ 2:0] src_reg_a;
-    logic [ 2:0] src_reg_b;
+    logic [4:0]  opcode;
+    logic [2:0]  dst_reg;
+    logic [2:0]  src_reg_a;
+    logic [2:0]  src_reg_b;
     logic [15:0] immediate;
+    logic [15:0] address;
   } warp_decoder_out_t;
 
   typedef struct packed {
@@ -35,14 +37,40 @@ package gpu_types;
     logic [1:0] writeback_source;
     logic write_enable;
     logic [15:0] jmp_address;
-  } lane_request_t;
+  } warp_request_t;
 
   typedef struct packed {
-    logic write_enable;
-    // Each field contains one 16-bit word per lane; index 0 is lane 0.
-    logic [7:0][15:0] mem_address;
-    logic [7:0][15:0] mem_write_data;
-  } warp_mem_request;
+    logic [15:0] value;
+    logic        operands_equal;
+    logic [15:0] mem_address;
+    logic [15:0] mem_write_data;
+  } warp_lane_response_t;
+
+  typedef struct packed {
+    logic [7:0][15:0] address;
+    logic [7:0][15:0] write_data;
+    logic             write_enable;
+  } gpu_mem_request_t;
+
+  typedef struct packed {
+    logic [7:0][15:0] read_data;
+  } gpu_mem_response_t;
+
+  typedef gpu_mem_request_t warp_mem_request_t;
+  typedef gpu_mem_response_t warp_mem_response_t;
+
+  typedef struct packed {
+    logic operands_equal;
+    logic diverged;
+  } warp_lane_status_t;
+
+  typedef struct packed {
+    logic [15:0]   instruction_address;
+    logic          halted;
+    logic          mem_access;
+    logic          mem_write_enable;
+    warp_request_t warp_request;
+  } warp_control_unit_out_t;
 
 endpackage
 

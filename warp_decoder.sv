@@ -21,6 +21,24 @@ module warp_decoder (
         out.src_reg_b = instruction_data[4:2];
       end
 
+      `OP_LOAD: begin
+        out.valid     = 1'b1;
+        out.dst_reg   = instruction_data[10:8];
+        out.src_reg_b = instruction_data[7:5];
+      end
+
+      `OP_STORE: begin
+        out.valid     = 1'b1;
+        out.src_reg_b = instruction_data[10:8];
+        out.src_reg_a = instruction_data[7:5];
+      end
+
+      `OP_CMP: begin
+        out.valid     = 1'b1;
+        out.src_reg_a = instruction_data[10:8];
+        out.src_reg_b = instruction_data[7:5];
+      end
+
       `OP_MOV: begin
         out.valid     = 1'b1;
         out.dst_reg   = instruction_data[10:8];
@@ -42,6 +60,11 @@ module warp_decoder (
       `OP_TID: begin
         out.valid   = 1'b1;
         out.dst_reg = instruction_data[10:8];
+      end
+
+      `OP_JMP, `OP_JE: begin
+        out.valid   = 1'b1;
+        out.address = {5'b0, instruction_data[10:0]};
       end
 
       `OP_HALT: begin

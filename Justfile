@@ -63,6 +63,7 @@ test-all:
     just test warp_decoder_tb
     just test warp_datapath_tb
     just test warp_lane_tb
+    just test warp_memory_tb
     just test warp_tb
     just test register_tb
 

@@ -5,10 +5,10 @@
 `include "alu_ops.svh"
 
 module alu_16bit (
-    input      [ 3:0] op,
-    input      [15:0] a,
-    input      [15:0] b,
-    output logic [15:0] out
+    input      [ 3:0] operation,
+    input      [15:0] operand_a,
+    input      [15:0] operand_b,
+    output logic [15:0] result
 );
   wire [15:0] add_out;
   wire [15:0] sub_out;
@@ -19,28 +19,28 @@ module alu_16bit (
   wire [15:0] shr_out;
 
   adder_16bit add (
-      a,
-      b,
+      operand_a,
+      operand_b,
       add_out
   );
 
   subtracter_16bit sub (
-      a,
-      b,
+      operand_a,
+      operand_b,
       sub_out
   );
 
   always @(*) begin
-    case (op)
-      `ALU_OP_MOV: out = a;
-      `ALU_OP_ADD: out = add_out;
-      `ALU_OP_SUB: out = sub_out;
-      `ALU_OP_AND: out = a & b;
-      `ALU_OP_OR:  out = a | b;
-      `ALU_OP_XOR: out = a ^ b;
-      `ALU_OP_SHL: out = a << b;
-      `ALU_OP_SHR: out = a >> b;
-      `ALU_OP_MUL: out = a * b;
+    case (operation)
+      `ALU_OP_MOV: result = operand_a;
+      `ALU_OP_ADD: result = add_out;
+      `ALU_OP_SUB: result = sub_out;
+      `ALU_OP_AND: result = operand_a & operand_b;
+      `ALU_OP_OR:  result = operand_a | operand_b;
+      `ALU_OP_XOR: result = operand_a ^ operand_b;
+      `ALU_OP_SHL: result = operand_a << operand_b;
+      `ALU_OP_SHR: result = operand_a >> operand_b;
+      `ALU_OP_MUL: result = operand_a * operand_b;
     endcase
   end
 

@@ -7,8 +7,7 @@ module cpu_tb;
   wire [15:0] mem_read_data;
   wire cpu_types_pkg::cpu_mem_request_t mem_request;
   wire halted;
-  wire gpu_types::gpu_command_t gpu_command;
-  wire [15:0] gpu_launch_address;
+  wire gpu_types::gpu_dispatch_t gpu_dispatch;
   gpu_types::gpu_state_t gpu_state;
   integer cycles;
 
@@ -19,8 +18,7 @@ module cpu_tb;
       .gpu_state    (gpu_state),
       .mem_request  (mem_request),
       .halted       (halted),
-      .gpu_command  (gpu_command),
-      .gpu_launch_address(gpu_launch_address)
+      .gpu_dispatch (gpu_dispatch)
   );
   assign mem_read_data = memory[mem_request.address];
   always #5 clk = ~clk;
@@ -87,16 +85,16 @@ module cpu_tb;
 
     @(posedge clk);
     #1;
-    if (gpu_command !== gpu_types::GPU_COMMAND_LAUNCH)
+    if (gpu_dispatch.command !== gpu_types::GPU_COMMAND_LAUNCH)
       $fatal(1, "GLAUNCH was not forwarded to the CPU GPU-command output");
-    if (gpu_launch_address !== 16'd23)
+    if (gpu_dispatch.launch_address !== 16'd23)
       $fatal(1, "GLAUNCH did not forward its start address");
 
     @(posedge clk);
     #1;
-    if (gpu_command !== gpu_types::GPU_COMMAND_NONE)
+    if (gpu_dispatch.command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "GPU command remained asserted outside EXECUTE");
-    if (gpu_launch_address !== 16'd0)
+    if (gpu_dispatch.launch_address !== 16'd0)
       $fatal(1, "GPU launch address remained asserted outside EXECUTE");
 
     // GWAIT is CPU-local: it stalls while the GPU is running, then jumps to
@@ -116,7 +114,7 @@ module cpu_tb;
     #1;
     if (dut.control_unit_module.fsm_out_state !== `FSM_GPU_WAIT)
       $fatal(1, "GWAIT did not stall the CPU while the GPU was running");
-    if (gpu_command !== gpu_types::GPU_COMMAND_NONE)
+    if (gpu_dispatch.command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "GWAIT emitted a GPU command");
 
     repeat (2) @(posedge clk);

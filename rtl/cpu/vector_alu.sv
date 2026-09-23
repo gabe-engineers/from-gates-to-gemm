@@ -23,10 +23,10 @@ module vector_alu_16bit (
   generate
     for (lane = 0; lane < 8; lane = lane + 1) begin : vector_lanes
       alu_16bit lane_alu (
-          .op (scalar_alu_operation),
-          .a  (a[lane * 16 +: 16]),
-          .b  (b[lane * 16 +: 16]),
-          .out(out[lane * 16 +: 16])
+          .operation(scalar_alu_operation),
+          .operand_a(a[lane * 16 +: 16]),
+          .operand_b(b[lane * 16 +: 16]),
+          .result(out[lane * 16 +: 16])
       );
     end
   endgenerate

@@ -18,8 +18,7 @@ package cpu_types_pkg;
     logic [ 2:0] src_reg_b;
     logic [15:0] immediate;
     logic [15:0] address;
-    // Encoded by gpu_types::GPU_COMMAND_*.
-    logic [1:0] gpu_command;
+    logic        gpu_command;
   } decoder_out_t;
 
   typedef struct packed {
@@ -45,8 +44,7 @@ package cpu_types_pkg;
     logic [ 2:0] vector_alu_read_addr_a;
     logic [ 2:0] vector_alu_read_addr_b;
     logic        datapath_vector_dot_writeback_select;
-    // Encoded by gpu_types::GPU_COMMAND_*.
-    logic [ 1:0] gpu_command;
+    logic        gpu_command;
     logic [15:0] gpu_launch_address;
     logic        halted;
   } control_unit_out_t;

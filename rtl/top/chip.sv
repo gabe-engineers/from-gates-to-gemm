@@ -13,11 +13,10 @@ module chip (
   wire [15:0] cpu_mem_read_data;
   wire cpu_types_pkg::cpu_mem_request_t cpu_mem_request;
 
-  wire [7:0][15:0] gpu_mem_read_data;
-  wire gpu_types::warp_mem_request gpu_mem_request;
-  wire gpu_types::gpu_command_t gpu_command;
+  wire gpu_types::gpu_mem_response_t gpu_mem_response;
+  wire gpu_types::gpu_mem_request_t gpu_mem_request;
+  wire gpu_types::gpu_dispatch_t gpu_dispatch;
   wire gpu_types::gpu_state_t gpu_state;
-  wire [15:0] gpu_launch_address;
 
   cpu cpu_module (
       .clk(clk),
@@ -26,16 +25,14 @@ module chip (
       .gpu_state(gpu_state),
       .mem_request(cpu_mem_request),
       .halted(halted),
-      .gpu_command(gpu_command),
-      .gpu_launch_address(gpu_launch_address)
+      .gpu_dispatch(gpu_dispatch)
   );
 
   gpu gpu_module (
       .clk(clk),
       .reset(reset),
-      .mem_read_data(gpu_mem_read_data),
-      .gpu_command(gpu_command),
-      .gpu_launch_address(gpu_launch_address),
+      .mem_response(gpu_mem_response),
+      .gpu_dispatch(gpu_dispatch),
       .gpu_state(gpu_state),
       .gpu_mem_request(gpu_mem_request)
   );
@@ -44,7 +41,7 @@ module chip (
       .clk(clk),
       .cpu_mem_request(cpu_mem_request),
       .cpu_read_data(cpu_mem_read_data),
-      .gpu_read_data(gpu_mem_read_data),
+      .gpu_read_response(gpu_mem_response),
       .gpu_mem_request(gpu_mem_request)
   );
 

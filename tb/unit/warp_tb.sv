@@ -10,14 +10,16 @@ module warp_tb;
   logic start;
   logic [15:0] start_address;
   logic enable;
+  wire gpu_types::warp_mem_response_t mem_response;
   wire [7:0][15:0] mem_read_data;
   logic [15:0] instruction_memory [0:511];
   wire halted;
-  wire gpu_types::warp_mem_request warp_mem_request;
+  wire gpu_types::warp_mem_request_t warp_mem_request;
 
   for (genvar lane = 0; lane < 8; lane++) begin : instruction_read_ports
-    assign mem_read_data[lane] = instruction_memory[warp_mem_request.mem_address[lane]];
+    assign mem_read_data[lane] = instruction_memory[warp_mem_request.address[lane]];
   end
+  assign mem_response.read_data = mem_read_data;
 
   warp dut (
       .clk(clk),
@@ -25,7 +27,7 @@ module warp_tb;
       .start(start),
       .start_address(start_address),
       .enable(enable),
-      .mem_read_data(mem_read_data),
+      .mem_response(mem_response),
       .halted(halted),
       .warp_mem_request(warp_mem_request)
   );
@@ -58,7 +60,7 @@ module warp_tb;
       $fatal(1, "disabled warp advanced before start");
     if (halted)
       $fatal(1, "disabled warp unexpectedly halted");
-    if (warp_mem_request.write_enable || warp_mem_request.mem_address[0] !== 16'd0)
+    if (warp_mem_request.write_enable || warp_mem_request.address[0] !== 16'd0)
       $fatal(1, "disabled warp issued an unexpected memory request");
 
     // A launch-style start resets the warp; subsequent enable cycles execute
@@ -66,7 +68,7 @@ module warp_tb;
     start = 1'b1;
     tick;
     start = 1'b0;
-    if (warp_mem_request.mem_address[0] !== 16'd23)
+    if (warp_mem_request.address[0] !== 16'd23)
       $fatal(1, "warp did not begin fetching from start_address");
     enable = 1'b1;
     tick;
@@ -74,7 +76,7 @@ module warp_tb;
         dut.datapath_module.lane_responses[7] !== 16'd7)
       $fatal(1, "TID was not broadcast with per-lane IDs");
     tick;
-    if (warp_mem_request.mem_address[0] !== 16'd24)
+    if (warp_mem_request.address[0] !== 16'd24)
       $fatal(1, "warp did not advance its instruction address");
 
     // HALT completes the warp. A subsequent start clears halted state.
@@ -89,7 +91,7 @@ module warp_tb;
     start = 1'b0;
     if (halted)
       $fatal(1, "start did not clear the completed warp state");
-    if (warp_mem_request.mem_address[0] !== 16'd100)
+    if (warp_mem_request.address[0] !== 16'd100)
       $fatal(1, "restart did not install a new instruction address");
 
     $display("warp_tb passed");

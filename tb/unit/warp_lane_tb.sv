@@ -6,15 +6,17 @@ module warp_lane_tb;
   logic clk;
   logic reset;
   logic [2:0] lane_id;
-  gpu_types::lane_request_t lane_request;
-  wire [15:0] out;
+  gpu_types::warp_request_t warp_request;
+  logic [15:0] mem_read_data;
+  wire gpu_types::warp_lane_response_t response;
 
   warp_lane dut (
       .clk(clk),
       .reset(reset),
       .lane_id(lane_id),
-      .lane_request(lane_request),
-      .out(out)
+      .warp_request(warp_request),
+      .mem_read_data(mem_read_data),
+      .response(response)
   );
 
   task tick;
@@ -26,11 +28,12 @@ module warp_lane_tb;
     end
   endtask
 
-  task expect_out(input [15:0] expected_out);
+  task expect_response(input [15:0] expected_response);
     begin
       #1;
-      if (out !== expected_out)
-        $fatal(1, "warp lane output: got %h, expected %h", out, expected_out);
+      if (response.value !== expected_response)
+        $fatal(1, "warp lane response: got %h, expected %h", response.value,
+               expected_response);
     end
   endtask
 
@@ -38,48 +41,66 @@ module warp_lane_tb;
     clk = 1'b0;
     reset = 1'b1;
     lane_id = 3'd5;
-    lane_request = '0;
+    warp_request = '0;
+    mem_read_data = 16'd0;
     tick;
     reset = 1'b0;
 
     // Immediate write to r2.
-    lane_request.dst_reg = 3'd1;
-    lane_request.write_enable = 1'b1;
-    lane_request.writeback_source = control_helpers_pkg::WB_IMMEDIATE;
-    lane_request.immediate = 16'h1234;
+    warp_request.dst_reg = 3'd1;
+    warp_request.write_enable = 1'b1;
+    warp_request.writeback_source = control_helpers_pkg::WB_IMMEDIATE;
+    warp_request.immediate = 16'h1234;
     tick;
 
     // Read r2 through MOV and write its value to r3.
-    lane_request.dst_reg = 3'd2;
-    lane_request.src_reg_a = 3'd1;
-    lane_request.writeback_source = control_helpers_pkg::WB_ALU;
-    lane_request.alu_op = `ALU_OP_MOV;
-    expect_out(16'h1234);
+    warp_request.dst_reg = 3'd2;
+    warp_request.src_reg_a = 3'd1;
+    warp_request.writeback_source = control_helpers_pkg::WB_ALU;
+    warp_request.alu_op = `ALU_OP_MOV;
+    expect_response(16'h1234);
     tick;
 
     // Add r2 and r3 into r4.
-    lane_request.dst_reg = 3'd3;
-    lane_request.src_reg_a = 3'd1;
-    lane_request.src_reg_b = 3'd2;
-    lane_request.alu_op = `ALU_OP_ADD;
-    expect_out(16'h2468);
+    warp_request.dst_reg = 3'd3;
+    warp_request.src_reg_a = 3'd1;
+    warp_request.src_reg_b = 3'd2;
+    warp_request.alu_op = `ALU_OP_ADD;
+    expect_response(16'h2468);
     tick;
 
+    warp_request.src_reg_a = 3'd1;
+    warp_request.src_reg_b = 3'd2;
+    #1;
+    if (!response.operands_equal)
+      $fatal(1, "lane reported inequality for two equal registers");
+    warp_request.src_reg_b = 3'd3;
+    #1;
+    if (response.operands_equal)
+      $fatal(1, "lane reported equality for two unequal registers");
+
     // TID writes this lane's fixed ID into r5.
-    lane_request.dst_reg = 3'd4;
-    lane_request.writeback_source = control_helpers_pkg::WB_THREAD_ID;
+    warp_request.dst_reg = 3'd4;
+    warp_request.writeback_source = control_helpers_pkg::WB_THREAD_ID;
     tick;
-    lane_request.write_enable = 1'b0;
-    lane_request.src_reg_a = 3'd4;
-    lane_request.writeback_source = control_helpers_pkg::WB_ALU;
-    lane_request.alu_op = `ALU_OP_MOV;
-    expect_out(16'h0005);
+    warp_request.write_enable = 1'b0;
+    warp_request.src_reg_a = 3'd4;
+    warp_request.writeback_source = control_helpers_pkg::WB_ALU;
+    warp_request.alu_op = `ALU_OP_MOV;
+    expect_response(16'h0005);
+
+    // A memory load writes the incoming word back through the lane.
+    mem_read_data = 16'hBEEF;
+    warp_request.writeback_source = control_helpers_pkg::WB_MEMORY;
+    expect_response(16'hBEEF);
+    mem_read_data = 16'd0;
+    warp_request.writeback_source = control_helpers_pkg::WB_ALU;
 
     // Reset clears lane-local state.
     reset = 1'b1;
     tick;
     reset = 1'b0;
-    expect_out(16'h0000);
+    expect_response(16'h0000);
 
     $display("warp_lane_tb passed");
     $finish;

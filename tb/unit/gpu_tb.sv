@@ -7,23 +7,24 @@
 module gpu_tb;
   logic clk;
   logic reset;
-  wire [7:0][15:0] mem_read_data;
+  wire gpu_types::warp_mem_response_t mem_response;
   logic [15:0] instruction_memory [0:511];
-  gpu_types::gpu_command_t gpu_command;
-  logic [15:0] gpu_launch_address;
+  gpu_types::gpu_dispatch_t gpu_dispatch;
   wire gpu_types::gpu_state_t gpu_state;
-  wire gpu_types::warp_mem_request gpu_mem_request;
+  wire gpu_types::gpu_mem_request_t gpu_mem_request;
+
+  wire [7:0][15:0] mem_read_data;
 
   for (genvar lane = 0; lane < 8; lane++) begin : memory_read_ports
-    assign mem_read_data[lane] = instruction_memory[gpu_mem_request.mem_address[lane]];
+    assign mem_read_data[lane] = instruction_memory[gpu_mem_request.address[lane]];
   end
+  assign mem_response.read_data = mem_read_data;
 
   gpu dut (
       .clk(clk),
       .reset(reset),
-      .mem_read_data(mem_read_data),
-      .gpu_command(gpu_command),
-      .gpu_launch_address(gpu_launch_address),
+      .mem_response(mem_response),
+      .gpu_dispatch(gpu_dispatch),
       .gpu_state(gpu_state),
       .gpu_mem_request(gpu_mem_request)
   );
@@ -40,8 +41,8 @@ module gpu_tb;
   initial begin
     clk = 1'b0;
     reset = 1'b1;
-    gpu_command = gpu_types::GPU_COMMAND_NONE;
-    gpu_launch_address = 16'd23;
+    gpu_dispatch.command = gpu_types::GPU_COMMAND_NONE;
+    gpu_dispatch.launch_address = 16'd23;
     for (int index = 0; index < 512; index++)
       instruction_memory[index] = {`OP_HALT, 11'd0};
     instruction_memory[23] = {`OP_LDI, 3'd0, 8'd1};
@@ -59,27 +60,27 @@ module gpu_tb;
     if (dut.warp_module.control_unit_module.fsm_out_state !== `FSM_FETCH_DECODE)
       $fatal(1, "disabled warp advanced while GPU was idle");
 
-    gpu_command = gpu_types::GPU_COMMAND_LAUNCH;
+    gpu_dispatch.command = gpu_types::GPU_COMMAND_LAUNCH;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "launch did not transition GPU from IDLE to RUNNING");
-    if (gpu_mem_request.mem_address[0] !== 16'd23)
+    if (gpu_mem_request.address[0] !== 16'd23)
       $fatal(1, "launch did not start fetching from its supplied address: got %0d",
-             gpu_mem_request.mem_address[0]);
+             gpu_mem_request.address[0]);
 
     // A second launch while work is active is a no-op.
-    gpu_launch_address = 16'd100;
+    gpu_dispatch.launch_address = 16'd100;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "launch while running changed the GPU state");
-    if (gpu_mem_request.mem_address[0] !== 16'd23)
+    if (gpu_mem_request.address[0] !== 16'd23)
       $fatal(1, "launch while running restarted the warp");
 
-    gpu_command = gpu_types::GPU_COMMAND_NONE;
+    gpu_dispatch.command = gpu_types::GPU_COMMAND_NONE;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "NONE changed the GPU state while work was active");
-    if (gpu_mem_request.mem_address[0] !== 16'd24)
+    if (gpu_mem_request.address[0] !== 16'd24)
       $fatal(1, "warp did not advance after executing its first instruction");
 
     // The HALT at address 24 completes the warp, then the controller returns
@@ -89,11 +90,11 @@ module gpu_tb;
       $fatal(1, "GPU did not return to IDLE after its warp halted");
 
     // An accepted launch resets the completed warp before it runs again.
-    gpu_command = gpu_types::GPU_COMMAND_LAUNCH;
+    gpu_dispatch.command = gpu_types::GPU_COMMAND_LAUNCH;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "completed warp was not restarted by a new launch");
-    if (gpu_mem_request.mem_address[0] !== 16'd100)
+    if (gpu_mem_request.address[0] !== 16'd100)
       $fatal(1, "relaunch did not use its new start address");
 
     $display("gpu_tb passed");

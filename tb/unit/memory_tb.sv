@@ -9,21 +9,22 @@ module memory_tb;
   logic        gpu_write_enable;
   logic [127:0] gpu_mem_address;
   logic [127:0] gpu_mem_write_data;
-  wire gpu_types::warp_mem_request gpu_mem_request;
+  wire gpu_types::warp_mem_request_t gpu_mem_request;
   wire [15:0] cpu_read_data;
-  wire [7:0][15:0] gpu_read_data;
+  wire gpu_types::warp_mem_response_t gpu_read_response;
+  wire [7:0][15:0] gpu_read_data = gpu_read_response.read_data;
 
   memory dut (
-      .clk            (clk),
-      .cpu_mem_request(cpu_mem_request),
-      .cpu_read_data  (cpu_read_data),
-      .gpu_mem_request(gpu_mem_request),
-      .gpu_read_data  (gpu_read_data)
+      .clk              (clk),
+      .cpu_mem_request  (cpu_mem_request),
+      .cpu_read_data    (cpu_read_data),
+      .gpu_mem_request  (gpu_mem_request),
+      .gpu_read_response(gpu_read_response)
   );
 
   assign gpu_mem_request.write_enable = gpu_write_enable;
-  assign gpu_mem_request.mem_address = gpu_mem_address;
-  assign gpu_mem_request.mem_write_data = gpu_mem_write_data;
+  assign gpu_mem_request.address = gpu_mem_address;
+  assign gpu_mem_request.write_data = gpu_mem_write_data;
 
   task tick;
     begin

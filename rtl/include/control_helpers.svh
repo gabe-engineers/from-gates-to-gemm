@@ -9,6 +9,7 @@ package control_helpers_pkg;
   localparam logic [1:0] WB_ALU = 2'b00;
   localparam logic [1:0] WB_IMMEDIATE = 2'b01;
   localparam logic [1:0] WB_THREAD_ID = 2'b10;
+  localparam logic [1:0] WB_MEMORY = 2'b11;
 
   function automatic logic is_execute_register_write_op(input logic [4:0] opcode);
     begin

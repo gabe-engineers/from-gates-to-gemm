@@ -58,10 +58,10 @@ module datapath_16bit (
   );
 
   alu_16bit alu (
-      alu_op,
-      read_data_a,
-      read_data_b,
-      alu_out
+      .operation(alu_op),
+      .operand_a(read_data_a),
+      .operand_b(read_data_b),
+      .result(alu_out)
   );
 
   vector_register_file vector_registers (
