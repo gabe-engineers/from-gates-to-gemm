@@ -87,12 +87,12 @@ module warp_control_unit_tb;
     if (dut.cmp_equal_flag !== 1'b1)
       $fatal(1, "uniform CMP did not set the warp equality flag");
 
-    mem_read_data = {`OP_JE, 11'd100};
+    mem_read_data = {`OP_JZ, 11'd100};
     tick;
     tick;
     #1;
     if (control_out.instruction_address !== 16'd100)
-      $fatal(1, "JE did not redirect the warp PC");
+      $fatal(1, "JZ did not redirect the warp PC");
 
     reset = 1'b1;
     mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};

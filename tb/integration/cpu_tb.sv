@@ -39,7 +39,7 @@ module cpu_tb;
     memory[4] = {`OP_STORE, `REG_1, `REG_4, 5'd0};
     memory[5] = {`OP_LOAD, `REG_5, `REG_1, 5'd0};
     memory[6] = {`OP_CMP, `REG_4, `REG_5, 5'd0};
-    memory[7] = {`OP_JE, 11'd9};
+    memory[7] = {`OP_JZ, 11'd9};
     memory[8] = {`OP_HALT, 11'd0};
     memory[9] = {`OP_LDI, `REG_6, 8'd16};
     memory[10] = {`OP_SHR, `REG_7, `REG_1, `REG_6, 2'd0};

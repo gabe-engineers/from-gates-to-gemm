@@ -1,0 +1,39 @@
+# Data image for dot_product_simd.asm, loaded at +DATA_BASE=100.
+# mem[100] = N, mem[101] = V1 base, mem[102] = V2 base, then the vectors.
+# N = 13 exercises the SIMD loop once and the scalar tail five times.
+
+000D   # N = 13
+0067   # V1 base = 103
+0074   # V2 base = 116
+
+# V1 = [1..13] at 103..115
+0001
+0002
+0003
+0004
+0005
+0006
+0007
+0008
+0009
+000A
+000B
+000C
+000D
+
+# V2 = [1..13] at 116..128
+0001
+0002
+0003
+0004
+0005
+0006
+0007
+0008
+0009
+000A
+000B
+000C
+000D
+
+# Expected dot product = 819 (0x0333), stored at mem[511].

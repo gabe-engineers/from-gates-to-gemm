@@ -58,7 +58,7 @@ module decoder (
         out.dst_reg = instruction_data[10:8];
       end
 
-      `OP_JMP, `OP_JE: begin
+      `OP_JMP, `OP_JZ, `OP_JLT: begin
         out.address = {5'b0, instruction_data[10:0]};
       end
 

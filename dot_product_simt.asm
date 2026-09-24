@@ -3,7 +3,7 @@ LDI r2 64 # loop bound
 LDI r3 64 # memory offset
 LDI r4 1 # increment
 CMP r1 r2 # loop condition
-JE 10
+JZ 10
 STORE r3 r1
 ADD r1 r4 r1
 ADD r3 r4 r3
@@ -12,7 +12,7 @@ LDI r1 0 # loop index for second vector
 LDI r2 64 # loop bound
 LDI r3 128 # memory offset
 CMP r1 r2
-JE 19
+JZ 19
 STORE r3 r1
 ADD r1 r4 r1
 ADD r3 r4 r3
@@ -32,7 +32,7 @@ ADD r2 r5 r2
 ADD r3 r5 r3
 ADD r3 r6 r3
 CMP r1 r3
-JE 42
+JZ 42
 LOAD r5 r1
 LOAD r6 r2
 MUL r7 r5 r6
@@ -54,7 +54,7 @@ LDI r6 58
 LUI r7 1
 OR r4 r6 r7 # Loading 314 which is outside the 255 immediate range for one LDI. Ending loop bound
 CMP r3 r4
-JE 61
+JZ 61
 LOAD r5 r3
 ADD r1 r1 r5
 ADD r3 r3 r2

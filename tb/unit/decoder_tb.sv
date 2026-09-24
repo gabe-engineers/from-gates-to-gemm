@@ -63,7 +63,7 @@ module decoder_tb;
               .expected_dst(3'd0), .expected_a(3'd0), .expected_b(3'd0), .expected_immediate(16'd0),
               .expected_address(16'h07FF));
 
-    test_case(.number(8), .instruction({`OP_JE, 11'h123}), .expected_opcode(`OP_JE),
+    test_case(.number(8), .instruction({`OP_JZ, 11'h123}), .expected_opcode(`OP_JZ),
               .expected_dst(3'd0), .expected_a(3'd0), .expected_b(3'd0), .expected_immediate(16'd0),
               .expected_address(16'h0123));
 
@@ -96,9 +96,13 @@ module decoder_tb;
               .expected_immediate(16'd0), .expected_address(16'd0));
 
     // Reserved fields do not alter operand fields; assemblers emit them as zero.
-    test_case(.number(16), .instruction({`OP_MOV, `REG_3, `REG_5, 5'h1F}),
-              .expected_opcode(`OP_MOV), .expected_dst(`REG_3), .expected_a(`REG_5),
-              .expected_b(3'd0), .expected_immediate(16'd0), .expected_address(16'd0));
+    test_case(.number(16), .instruction({`OP_MOV, `REG_3, `REG_5, 5'h1F}), .expected_opcode(`OP_MOV),
+              .expected_dst(`REG_3), .expected_a(`REG_5), .expected_b(3'd0),
+              .expected_immediate(16'd0), .expected_address(16'd0));
+
+    test_case(.number(17), .instruction({`OP_JLT, 11'h123}), .expected_opcode(`OP_JLT),
+              .expected_dst(3'd0), .expected_a(3'd0), .expected_b(3'd0), .expected_immediate(16'd0),
+              .expected_address(16'h0123));
 
     if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "regular instruction did not emit GPU_COMMAND_NONE");

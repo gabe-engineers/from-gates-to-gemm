@@ -17,6 +17,8 @@ module control_unit_tb;
       .mem_read_data(mem_read_data),
       .datapath_read_data_a(datapath_read_data_a),
       .datapath_read_data_b(datapath_read_data_b),
+      .datapath_zero_flag(1'b0),
+      .datapath_less_than_flag(1'b0),
       .gpu_state(gpu_state),
       .out(out)
   );

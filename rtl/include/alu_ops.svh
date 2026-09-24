@@ -7,3 +7,4 @@
 `define ALU_OP_SHL 4'b0111
 `define ALU_OP_SHR 4'b1000
 `define ALU_OP_MUL 4'b1001
+`define ALU_OP_CMP 4'b1100

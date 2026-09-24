@@ -11,6 +11,51 @@ package cpu_types_pkg;
     logic        write_enable;
   } cpu_mem_request_t;
 
+  // Scalar register-file port plus writeback selection. The thread_id is zero
+  // on the scalar CPU and carries the lane id inside a warp.
+  typedef struct packed {
+    logic        write_enable;
+    logic [ 1:0] writeback_source;
+    logic [ 2:0] thread_id;
+    logic [ 3:0] alu_op;
+    logic [15:0] immediate;
+    logic [ 2:0] read_addr_a;
+    logic [ 2:0] read_addr_b;
+    logic [ 2:0] write_addr;
+  } scalar_request_t;
+
+  typedef struct packed {
+    logic [15:0] read_data_a;
+    logic [15:0] read_data_b;
+    logic [15:0] write_reg_data;
+    logic        zero_flag;
+    logic        less_than_flag;
+  } scalar_response_t;
+
+  // Vector register-file memory port (VLD/VST).
+  typedef struct packed {
+    logic        write_enable;
+    logic [ 2:0] write_addr;
+    logic [ 2:0] write_lane;
+    logic [15:0] write_data;
+    logic [ 2:0] read_addr;
+    logic [ 2:0] read_lane;
+  } vector_mem_request_t;
+
+  typedef struct packed {
+    logic [15:0] read_data;
+  } vector_mem_response_t;
+
+  // Vector ALU port (VADD/VSUB/VMUL/VDOT) plus the dot-product writeback select.
+  typedef struct packed {
+    logic        write_enable;
+    logic [ 2:0] write_addr;
+    logic [ 4:0] operation;
+    logic [ 2:0] read_addr_a;
+    logic [ 2:0] read_addr_b;
+    logic        dot_writeback_select;
+  } vector_alu_request_t;
+
   typedef struct packed {
     logic [ 4:0] opcode;
     logic [ 2:0] dst_reg;
@@ -46,6 +91,7 @@ package cpu_types_pkg;
     logic        datapath_vector_dot_writeback_select;
     logic        gpu_command;
     logic [15:0] gpu_launch_address;
+    logic        cmp_less_flag;
     logic        halted;
   } control_unit_out_t;
 

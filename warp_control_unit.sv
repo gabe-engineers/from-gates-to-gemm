@@ -21,12 +21,12 @@ module warp_control_unit (
 
   wire is_cmp = decoder_out.opcode == `OP_CMP;
   wire is_jmp = decoder_out.opcode == `OP_JMP;
-  wire is_je = decoder_out.opcode == `OP_JE;
+  wire is_jz = decoder_out.opcode == `OP_JZ;
   wire is_load = decoder_out.opcode == `OP_LOAD;
   wire is_store = decoder_out.opcode == `OP_STORE;
 
   wire branch_diverged = is_cmp && lane_status.diverged;
-  wire branch_taken = is_jmp || (is_je && cmp_equal_flag);
+  wire branch_taken = is_jmp || (is_jz && cmp_equal_flag);
   wire mem_phase = fsm_out_state == `FSM_MEMORY;
 
   always @(posedge clk) begin

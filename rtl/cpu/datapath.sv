@@ -1,3 +1,4 @@
+`include "cpu_types.svh"
 `include "register_file.sv"
 `include "vector_register_file.sv"
 `include "vector_alu.sv"
@@ -5,86 +6,76 @@
 `include "control_helpers.svh"
 
 module datapath_16bit (
-    input         clk,
-    input         reset,
-    input         write_enable,
-    input  [ 1:0] writeback_source,
-    input  [ 2:0] thread_id,
-    input  [ 3:0] alu_op,
-    input  [15:0] immediate,
-    input  [ 2:0] read_addr_a,
-    input  [ 2:0] read_addr_b,
-    input  [ 2:0] write_addr,
-    output [15:0] write_reg_data,
-    output [15:0] read_data_a,
-    output [15:0] read_data_b,
-    input         vector_write_enable,
-    input  [ 2:0] vector_write_addr,
-    input  [ 2:0] vector_write_lane,
-    input  [15:0] vector_write_data,
-    input  [ 2:0] vector_read_addr,
-    input  [ 2:0] vector_read_lane,
-    output [15:0] vector_read_data,
-    input         vector_alu_write_enable,
-    input  [ 2:0] vector_alu_write_addr,
-    input  [ 4:0] vector_alu_operation,
-    input  [ 2:0] vector_alu_read_addr_a,
-    input  [ 2:0] vector_alu_read_addr_b,
-    input         vector_dot_writeback_select
+    input                                       clk,
+    input                                       reset,
+    input  cpu_types_pkg::scalar_request_t      scalar_request,
+    input  cpu_types_pkg::vector_mem_request_t  vector_mem_request,
+    input  cpu_types_pkg::vector_alu_request_t  vector_alu_request,
+    output cpu_types_pkg::scalar_response_t     scalar_response,
+    output cpu_types_pkg::vector_mem_response_t vector_mem_response
 );
   wire [ 15:0] alu_out;
-  wire [ 15:0] write_data;
+  logic [15:0] write_data;
   wire [127:0] vector_alu_read_data_a;
   wire [127:0] vector_alu_read_data_b;
   wire [127:0] vector_alu_out;
   wire [ 15:0] vector_dot_product;
 
-  assign write_data = vector_dot_writeback_select ? vector_dot_product :
-                      writeback_source == control_helpers_pkg::WB_IMMEDIATE ? immediate :
-                      writeback_source == control_helpers_pkg::WB_THREAD_ID ?
-                          {13'b0, thread_id} : alu_out;
+  // The vector dot product overrides the scalar source; otherwise the source
+  // selects the immediate, the lane/thread id, or the ALU result.
+  always_comb begin
+    if (vector_alu_request.dot_writeback_select)
+      write_data = vector_dot_product;
+    else case (scalar_request.writeback_source)
+      control_helpers_pkg::WB_IMMEDIATE: write_data = scalar_request.immediate;
+      control_helpers_pkg::WB_THREAD_ID: write_data = {13'b0, scalar_request.thread_id};
+      default:                           write_data = alu_out;
+    endcase
+  end
 
   register_file registers (
       .clk           (clk),
       .reset         (reset),
-      .write_enable  (write_enable),
-      .write_addr    (write_addr),
+      .write_enable  (scalar_request.write_enable),
+      .write_addr    (scalar_request.write_addr),
       .write_data    (write_data),
-      .read_addr_a   (read_addr_a),
-      .read_addr_b   (read_addr_b),
-      .read_data_a   (read_data_a),
-      .read_data_b   (read_data_b),
-      .write_reg_data(write_reg_data)
+      .read_addr_a   (scalar_request.read_addr_a),
+      .read_addr_b   (scalar_request.read_addr_b),
+      .read_data_a   (scalar_response.read_data_a),
+      .read_data_b   (scalar_response.read_data_b),
+      .write_reg_data(scalar_response.write_reg_data)
   );
 
   alu_16bit alu (
-      .operation(alu_op),
-      .operand_a(read_data_a),
-      .operand_b(read_data_b),
-      .result(alu_out)
+      .operation(scalar_request.alu_op),
+      .operand_a(scalar_response.read_data_a),
+      .operand_b(scalar_response.read_data_b),
+      .result(alu_out),
+      .zero_flag(scalar_response.zero_flag),
+      .less_than_flag(scalar_response.less_than_flag)
   );
 
   vector_register_file vector_registers (
       .clk                    (clk),
       .reset                  (reset),
-      .write_enable           (vector_write_enable),
-      .write_addr             (vector_write_addr),
-      .write_lane             (vector_write_lane),
-      .write_data             (vector_write_data),
-      .read_addr              (vector_read_addr),
-      .read_lane              (vector_read_lane),
-      .read_data              (vector_read_data),
-      .vector_alu_write_enable(vector_alu_write_enable),
-      .vector_alu_write_addr  (vector_alu_write_addr),
+      .write_enable           (vector_mem_request.write_enable),
+      .write_addr             (vector_mem_request.write_addr),
+      .write_lane             (vector_mem_request.write_lane),
+      .write_data             (vector_mem_request.write_data),
+      .read_addr              (vector_mem_request.read_addr),
+      .read_lane              (vector_mem_request.read_lane),
+      .read_data              (vector_mem_response.read_data),
+      .vector_alu_write_enable(vector_alu_request.write_enable),
+      .vector_alu_write_addr  (vector_alu_request.write_addr),
       .vector_alu_write_data  (vector_alu_out),
-      .vector_alu_read_addr_a (vector_alu_read_addr_a),
-      .vector_alu_read_addr_b (vector_alu_read_addr_b),
+      .vector_alu_read_addr_a (vector_alu_request.read_addr_a),
+      .vector_alu_read_addr_b (vector_alu_request.read_addr_b),
       .vector_alu_read_data_a (vector_alu_read_data_a),
       .vector_alu_read_data_b (vector_alu_read_data_b)
   );
 
   vector_alu_16bit vector_alu (
-      .operation  (vector_alu_operation),
+      .operation  (vector_alu_request.operation),
       .a          (vector_alu_read_data_a),
       .b          (vector_alu_read_data_b),
       .out        (vector_alu_out),

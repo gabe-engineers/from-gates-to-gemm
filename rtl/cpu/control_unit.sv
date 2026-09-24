@@ -10,6 +10,8 @@ module control_unit (
     input                                         [15:0] mem_read_data,
     input                                         [15:0] datapath_read_data_a,
     input                                         [15:0] datapath_read_data_b,
+    input                                                datapath_zero_flag,
+    input                                                datapath_less_than_flag,
     input gpu_types::gpu_state_t                         gpu_state,
     output wire cpu_types_pkg::control_unit_out_t        out
 );
@@ -18,6 +20,7 @@ module control_unit (
   wire advance_pc;
   wire write_enable_pc;
   logic cmp_equal_flag;
+  logic cmp_less_flag;
 
   wire [2:0] fsm_out_state;
   wire gpu_busy = gpu_state == gpu_types::GPU_STATE_RUNNING;
@@ -77,11 +80,17 @@ module control_unit (
     else if (fsm_out_state == `FSM_MEMORY && !is_vector_memory_operation) vector_lane <= 3'd0;
   end
 
-  // CMP is control flow state: it records equality for a later JE instruction.
+  // CMP is control flow state. The ALU computes the comparison flags and the
+  // control unit latches them for a later conditional branch (JZ reads equal,
+  // a JL-style opcode would read less_than_flag).
   always @(posedge clk) begin
-    if (reset) cmp_equal_flag <= 1'b0;
-    else if (fsm_out_state == `FSM_EXECUTE && decoder_out.opcode == `OP_CMP)
-      cmp_equal_flag <= datapath_read_data_a == datapath_read_data_b;
+    if (reset) begin
+      cmp_equal_flag <= 1'b0;
+      cmp_less_flag <= 1'b0;
+    end else if (fsm_out_state == `FSM_EXECUTE && decoder_out.opcode == `OP_CMP) begin
+      cmp_equal_flag <= datapath_zero_flag;
+      cmp_less_flag <= datapath_less_than_flag;
+    end
   end
 
   assign out.datapath_immediate =
@@ -120,7 +129,8 @@ module control_unit (
   assign write_enable_pc =
       (fsm_out_state == `FSM_EXECUTE &&
        (decoder_out.opcode == `OP_JMP ||
-        (decoder_out.opcode == `OP_JE && cmp_equal_flag))) ||
+        (decoder_out.opcode == `OP_JZ && cmp_equal_flag) ||
+        (decoder_out.opcode == `OP_JLT && cmp_less_flag))) ||
       gwait_resume;
 
   assign out.mem_write_enable = fsm_out_state == `FSM_MEMORY &&
@@ -157,6 +167,8 @@ module control_unit (
   assign out.gpu_launch_address =
       fsm_out_state == `FSM_EXECUTE && decoder_out.opcode == `OP_GLAUNCH ?
           decoder_out.address : 16'b0;
+
+  assign out.cmp_less_flag = cmp_less_flag;
 
   assign out.halted = fsm_out_state == `FSM_HALT;
 

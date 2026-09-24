@@ -4,7 +4,8 @@ include_dirs := "-Irtl/include -Irtl/lib -Irtl/cpu -Irtl/memory -Irtl/top -Itb/i
 default: test-all
 
 # Run one testbench, for example: just test cpu_tb
-test target:
+# Extra arguments are passed to vvp, e.g. just test program_tb +DATA=vec.data
+test target *args:
     #!/usr/bin/env sh
     set -eu
     mkdir -p {{sim_dir}}
@@ -17,23 +18,25 @@ test target:
       exit 1
     fi
     iverilog -g2012 {{include_dirs}} -o {{sim_dir}}/{{target}} "$testbench"
-    vvp {{sim_dir}}/{{target}}
+    vvp {{sim_dir}}/{{target}} {{args}}
 
 # Assemble an arbitrary source program and run it in the generic CPU harness.
-run-program source:
+# Extra arguments are passed to vvp, e.g.:
+#   just run-program foo.asm +DATA=foo.data +RESULT=511
+run-program source *args:
     python3 assembler.py "{{source}}"
-    just test program_tb
+    just test program_tb {{args}}
 
-# Assemble and run the checked-in dot-product program.
+# Assemble and run the checked-in scalar N-size dot-product program.
 test-dotproduct:
-    just run-program dotproduct.asm
+    just run-program dot_product_scalar.asm +DATA=dot_product_scalar.data +RESULT=511
 
 # Assemble and run the checked-in SIMD dot-product program.
 test-dotproduct-simd:
-    just run-program dot_product_simd.asm
+    just run-program dot_product_simd.asm +DATA=dot_product_simd.data +RESULT=511
 # Assemble and run the checked-in SIMT GPU dot-product program.
 test-dotproduct-simt:
-    just run-program dot-product-simt.asm
+    just run-program dot_product_simt.asm
 
 synth-check:
     sh scripts/synth_check.sh

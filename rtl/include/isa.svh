@@ -12,7 +12,7 @@
 `define OP_STORE 5'h0B
 `define OP_CMP 5'h0C
 `define OP_JMP 5'h0D
-`define OP_JE 5'h0E
+`define OP_JZ 5'h0E
 `define OP_HALT 5'h0F
 `define OP_VLD 5'h10
 `define OP_VST 5'h11
@@ -24,3 +24,4 @@
 `define OP_TID 5'h17
 `define OP_GLAUNCH 5'h18
 `define OP_GWAIT 5'h19
+`define OP_JLT 5'h1A

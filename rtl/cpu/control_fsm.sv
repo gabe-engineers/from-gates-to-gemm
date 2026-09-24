@@ -25,7 +25,7 @@ module control_fsm (
           state <= `FSM_HALT;
         else case (opcode)
           `OP_LDI, `OP_LUI, `OP_MOV, `OP_ADD, `OP_SUB, `OP_AND, `OP_OR, `OP_XOR,
-          `OP_SHL, `OP_SHR, `OP_MUL, `OP_CMP, `OP_JMP, `OP_JE,
+          `OP_SHL, `OP_SHR, `OP_MUL, `OP_CMP, `OP_JMP, `OP_JZ, `OP_JLT,
           `OP_VADD, `OP_VSUB, `OP_VMUL, `OP_VDOT, `OP_TID, `OP_GLAUNCH:
             state <= `FSM_FETCH_DECODE;
           `OP_LOAD, `OP_STORE, `OP_VLD, `OP_VST:

@@ -30,7 +30,8 @@ VALID_INSTRUCTION_CASES = (
     ("store r8 r1", "5F00", (0x0B, 0, 0, 7, 0, 0)),
     ("cmp r8 r1", "6700", (0x0C, 0, 7, 0, 0, 0)),
     ("jmp 2047", "6FFF", (0x0D, 0, 0, 0, 0, 0x07FF)),
-    ("je 0", "7000", (0x0E, 0, 0, 0, 0, 0)),
+    ("jz 0", "7000", (0x0E, 0, 0, 0, 0, 0)),
+    ("jlt 0", "D000", (0x1A, 0, 0, 0, 0, 0)),
     ("halt", "7800", (0x0F, 0, 0, 0, 0, 0)),
     ("vld v8 r7", "87C0", (0x10, 7, 0, 6, 0, 0)),
     ("vst r1 v8", "88E0", (0x11, 0, 7, 0, 0, 0)),
@@ -114,7 +115,7 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
             self.assertEqual(int(emitted, 16), int(expected_word, 16))
             self.assertEqual(decoder_fields(int(emitted, 16)), expected_fields)
 
-    def test_whitespace_comments_case_and_jz_alias(self) -> None:
+    def test_whitespace_comments_and_case(self) -> None:
         words = self.assemble(
             " # comment\n\tLDI R1 7 # value\n  JZ 42\n\tHALT\n"
         )
@@ -123,7 +124,7 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
     def test_immediate_and_jump_boundaries(self) -> None:
         self.assertEqual(
             self.assemble(
-                "ldi r1 0\nldi r1 255\nlui r1 0\nlui r1 255\njmp 0\nje 2047\n"
+                "ldi r1 0\nldi r1 255\nlui r1 0\nlui r1 255\njmp 0\njz 2047\n"
                 "glaunch 2047\ngwait 0\ngwait 2047\n"
             ),
             ["0000", "00FF", "B000", "B0FF", "6800", "77FF", "C7FF", "C800", "CFFF"],
