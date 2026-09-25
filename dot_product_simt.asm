@@ -1,64 +1,72 @@
-LDI r1 0 # loop index
-LDI r2 64 # loop bound
-LDI r3 64 # memory offset
-LDI r4 1 # increment
-CMP r1 r2 # loop condition
-JZ 10
-STORE r3 r1
-ADD r1 r4 r1
-ADD r3 r4 r3
-JMP 4
-LDI r1 0 # loop index for second vector
-LDI r2 64 # loop bound
-LDI r3 128 # memory offset
-CMP r1 r2
-JZ 19
-STORE r3 r1
-ADD r1 r4 r1
-ADD r3 r4 r3
-JMP 13
-GLAUNCH 21
-GWAIT 49 # wait for the GPU, then resume at the reduction loop
-LDI r1 64 # V1 offset
-LDI r2 128 # V2 offset
-LDI r3 64 # V1 base for the per-lane end (V1 + TID*8 + 8)
-LDI r4 1 # increment
-LDI r8 0 # dot product result
-TID r5 # Computing the starting and ending offsets for each thread. Should be start: V offset + TID * 8, end: V offset + TID * 8 + 8
-LDI r6 8
-MUL r5 r5 r6
-ADD r1 r5 r1
-ADD r2 r5 r2
-ADD r3 r5 r3
-ADD r3 r6 r3
+# Dot product for two vectors of size N using the SIMT unit, with the CPU
+# reducing the per-lane partials.
+#
+# Assumptions:
+# - Instruction memory 0-99; data memory from 100
+# - mem[100] = N, mem[101] = V1 base, mem[102] = V2 base
+# - N and every element index are non-negative and below 2^15, so the sign bit
+#   of (index - bound) is set exactly when index < bound
+# - Reads up to V1 base + 64 must still land in RAM (they are masked, not used)
+# - Each of the 8 lanes handles 8 contiguous elements. Out-of-range elements are
+#   multiplied by a 0/1 mask instead of branched over, so every lane runs the
+#   same number of iterations and the warp never diverges
+# - Per-lane partials at mem[104 + TID]; result at mem[511]
+
+# CPU: launch the kernel, then reduce the per-lane partials
+GLAUNCH 2
+GWAIT 36
+
+# GPU kernel
+LDI r1 101
+LOAD r1 r1        # V1 base
+LDI r2 102
+LOAD r2 r2        # V2 base
+LDI r5 100
+LOAD r5 r5        # N
+ADD r5 r5 r1      # bound = V1 base + N
+TID r6
+LDI r7 8
+MUL r6 r6 r7      # TID * 8
+ADD r1 r6 r1      # V1 ptr = V1 base + TID*8
+ADD r2 r6 r2      # V2 ptr = V2 base + TID*8
+ADD r3 r1 r7      # V1 end = ptr + 8
+LDI r4 1          # increment
+LDI r7 15         # shift amount for the mask
+LDI r8 0          # per-lane partial
 CMP r1 r3
-JZ 42
-LOAD r5 r1
-LOAD r6 r2
-MUL r7 r5 r6
-ADD r8 r8 r7
-ADD r1 r4 r1 # Increment offsets
-ADD r2 r4 r2
-JMP 33
-LDI r1 250
-TID r3
-LDI r4 8
-MUL r3 r3 r4
-ADD r1 r1 r3
+JZ 31             # 8 elements done -> store the partial
+SUB r6 r1 r5      # index - bound
+SHR r6 r6 r7      # mask = (index < bound) ? 1 : 0
+LOAD r7 r1        # V1[index]
+MUL r6 r6 r7      # mask * V1[index]
+LOAD r7 r2        # V2[index]
+MUL r6 r6 r7      # mask * V1[index] * V2[index]
+ADD r8 r8 r6      # accumulate
+LDI r7 15         # restore the shift amount
+ADD r1 r1 r4
+ADD r2 r2 r4
+JMP 18
+
+LDI r1 104
+TID r6
+ADD r1 r1 r6
 STORE r1 r8
-HALT # GPU halt
-LDI r1 0 # result acc
-LDI r2 8 # loop increments
-LDI r3 250 # starting memory offset
-LDI r6 58
-LUI r7 1
-OR r4 r6 r7 # Loading 314 which is outside the 255 immediate range for one LDI. Ending loop bound
-CMP r3 r4
-JZ 61
-LOAD r5 r3
-ADD r1 r1 r5
-ADD r3 r3 r2
-JMP 53
+HALT              # GPU halt
+
+# CPU: reduce the 8 partials into mem[511]
+LDI r1 104
+LDI r2 8
+ADD r2 r1 r2      # bound = 104 + 8
+LDI r3 1
+LDI r4 0
+CMP r1 r2
+JZ 47
+LOAD r5 r1
+ADD r4 r4 r5
+ADD r1 r1 r3
+JMP 41
+LUI r1 1          # Build 511 = 0x01FF
+LDI r5 255
+OR r1 r1 r5
+STORE r1 r4
 HALT
-
-

@@ -104,6 +104,10 @@ module decoder_tb;
               .expected_dst(3'd0), .expected_a(3'd0), .expected_b(3'd0), .expected_immediate(16'd0),
               .expected_address(16'h0123));
 
+    test_case(.number(18), .instruction({`OP_JR, `REG_8, 8'd0}), .expected_opcode(`OP_JR),
+              .expected_dst(3'd0), .expected_a(`REG_8), .expected_b(3'd0),
+              .expected_immediate(16'd0), .expected_address(16'd0));
+
     if (decoder_out.gpu_command !== gpu_types::GPU_COMMAND_NONE)
       $fatal(1, "regular instruction did not emit GPU_COMMAND_NONE");
 

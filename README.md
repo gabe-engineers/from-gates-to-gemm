@@ -10,7 +10,7 @@ This project implements a multi-cycle 16-bit scalar and SIMD processor in Verilo
   16-bit lanes per register.
 - Memory is word-addressed.
 - The PC and register-held memory addresses are 16 bits.
-- The supplied RAM contains 512 words. Access outside the installed RAM range is
+- The supplied RAM contains 4096 words. Access outside the installed RAM range is
   undefined behavior; architectural address width and physical RAM capacity are
   intentionally separate.
 
@@ -121,7 +121,8 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x18` | `GLAUNCH addr11` | Start GPU execution at `addr11` if the GPU is idle; no-op while it is running |
 | `0x19` | `GWAIT addr11` | Stall the scalar CPU until the GPU is idle, then jump to `addr11` |
 | `0x1A` | `JLT addr11` | Jump when the less-than flag is set |
-| `0x1B–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
+| `0x1B` | `JR rd` | Jump to the address held in a scalar register |
+| `0x1C–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
 Unsupported opcodes stop the current CPU implementation without side effects.
 
@@ -133,7 +134,7 @@ zero-extended `addr11` operand. This makes the wait skip over an inline GPU
 kernel, so a program can lay out the CPU and warp code in one image.
 
 Warp code uses a scalar/SIMT subset: `LDI`, `LUI`, `MOV`, scalar arithmetic,
-`LOAD`, `STORE`, `CMP`, `JMP`, `JZ`, `TID`, and `HALT` (`JLT` is CPU-only).
+`LOAD`, `STORE`, `CMP`, `JMP`, `JZ`, `TID`, and `HALT` (`JLT` and `JR` are CPU-only).
 Each supported
 instruction is broadcast across the warp's lanes. `CMP` reconciles every lane's
 equality into one warp flag; if the lanes disagree the warp halts, because

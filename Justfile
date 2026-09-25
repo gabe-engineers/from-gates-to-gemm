@@ -36,7 +36,11 @@ test-dotproduct-simd:
     just run-program dot_product_simd.asm +DATA=dot_product_simd.data +RESULT=511
 # Assemble and run the checked-in SIMT GPU dot-product program.
 test-dotproduct-simt:
-    just run-program dot_product_simt.asm
+    just run-program dot_product_simt.asm +DATA=dot_product_simt.data +RESULT=511
+
+# Assemble and run the checked-in scalar GEMM program (C is at 116..131).
+test-gemm:
+    just run-program gemm_scalar.asm +DATA=gemm_scalar.data +RESULT=116
 
 synth-check:
     sh scripts/synth_check.sh

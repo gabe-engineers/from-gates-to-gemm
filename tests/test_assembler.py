@@ -32,6 +32,7 @@ VALID_INSTRUCTION_CASES = (
     ("jmp 2047", "6FFF", (0x0D, 0, 0, 0, 0, 0x07FF)),
     ("jz 0", "7000", (0x0E, 0, 0, 0, 0, 0)),
     ("jlt 0", "D000", (0x1A, 0, 0, 0, 0, 0)),
+    ("jr r8", "DF00", (0x1B, 0, 7, 0, 0, 0)),
     ("halt", "7800", (0x0F, 0, 0, 0, 0, 0)),
     ("vld v8 r7", "87C0", (0x10, 7, 0, 6, 0, 0)),
     ("vst r1 v8", "88E0", (0x11, 0, 7, 0, 0, 0)),
@@ -65,6 +66,8 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         dst, immediate = (word >> 8) & 7, (word & 0xFF) << 8
     elif opcode == 0x17:
         dst = (word >> 8) & 7
+    elif opcode == 0x1B:
+        src_a = (word >> 8) & 7
     elif opcode in (0x0D, 0x0E, 0x18, 0x19):
         address = word & 0x7FF
     return opcode, dst, src_a, src_b, immediate, address
@@ -163,10 +166,10 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
                 self.assert_fails(source)
 
     def test_program_size_is_physical_ram_capacity(self) -> None:
-        words = self.assemble("halt\n" * 512)
-        self.assertEqual(len(words), 512)
+        words = self.assemble("halt\n" * 4096)
+        self.assertEqual(len(words), 4096)
         self.assertTrue(all(word == "7800" for word in words))
-        self.assert_fails("halt\n" * 513)
+        self.assert_fails("halt\n" * 4097)
 
 
 class AssemblerCpuIntegrationTests(AssemblerTestSupport, unittest.TestCase):

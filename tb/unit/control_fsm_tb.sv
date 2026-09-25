@@ -114,7 +114,7 @@ module control_fsm_tb;
 
     // Unsupported/deferred opcodes stop without executing side effects.
     reset = 0;
-    opcode = 5'h1B;
+    opcode = 5'h1C;
     @(posedge clk); #1;
     @(posedge clk); #1;
     if (state !== `FSM_HALT) $fatal(1, "unsupported opcode did not stop");

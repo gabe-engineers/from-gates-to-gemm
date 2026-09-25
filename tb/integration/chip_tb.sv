@@ -4,6 +4,9 @@
 module chip_tb;
   logic clk;
   logic reset;
+  logic load_enable;
+  logic [15:0] load_address;
+  logic [15:0] load_data;
   wire halted;
   integer cycles;
   logic saw_cpu_wait;
@@ -12,9 +15,9 @@ module chip_tb;
   chip dut (
       .clk(clk),
       .reset(reset),
-      .load_enable(1'b0),
-      .load_address(16'b0),
-      .load_data(16'b0),
+      .load_enable(load_enable),
+      .load_address(load_address),
+      .load_data(load_data),
       .halted(halted)
   );
 
@@ -27,30 +30,42 @@ module chip_tb;
     end
   endtask
 
+  task load_word(input [15:0] address, input [15:0] data);
+    begin
+      load_enable  = 1'b1;
+      load_address = address;
+      load_data    = data;
+      tick;
+      load_enable = 1'b0;
+    end
+  endtask
+
   initial begin
     clk = 1'b0;
     reset = 1'b1;
+    load_enable = 1'b0;
+    load_address = 16'b0;
+    load_data = 16'b0;
     cycles = 0;
     saw_cpu_wait = 1'b0;
     saw_gpu_running = 1'b0;
 
-    // The RAM has no external preload port, so this end-to-end program is
-    // fixed into its implementation registers. It proves that GLAUNCH's
-    // address reaches the warp instruction fetch path through chip.
-    force dut.memory_module.memory_words[0].register.data_out = {`OP_LDI, `REG_1, 8'd7};
-    force dut.memory_module.memory_words[1].register.data_out = {`OP_LDI, `REG_2, 8'd5};
-    force dut.memory_module.memory_words[2].register.data_out =
-        {`OP_ADD, `REG_3, `REG_1, `REG_2, 2'd0};
-    force dut.memory_module.memory_words[3].register.data_out = {`OP_GLAUNCH, 11'd20};
-    force dut.memory_module.memory_words[4].register.data_out = {`OP_GWAIT, 11'd5};
-    force dut.memory_module.memory_words[5].register.data_out = {`OP_HALT, 11'd0};
+    // Preload the end-to-end program through the RAM load port while reset is
+    // held. It proves GLAUNCH's address reaches the warp instruction fetch path
+    // through chip.
+    load_word(16'd0, {`OP_LDI, `REG_1, 8'd7});
+    load_word(16'd1, {`OP_LDI, `REG_2, 8'd5});
+    load_word(16'd2, {`OP_ADD, `REG_3, `REG_1, `REG_2, 2'd0});
+    load_word(16'd3, {`OP_GLAUNCH, 11'd20});
+    load_word(16'd4, {`OP_GWAIT, 11'd5});
+    load_word(16'd5, {`OP_HALT, 11'd0});
 
     // A short scalar/SIMT kernel: TID writes lane IDs to r4, then extra
     // instructions ensure the CPU observes RUNNING and enters GWAIT.
-    force dut.memory_module.memory_words[20].register.data_out = {`OP_TID, `REG_4, 8'd0};
-    force dut.memory_module.memory_words[21].register.data_out = {`OP_LDI, `REG_1, 8'd1};
-    force dut.memory_module.memory_words[22].register.data_out = {`OP_LDI, `REG_2, 8'd2};
-    force dut.memory_module.memory_words[23].register.data_out = {`OP_HALT, 11'd0};
+    load_word(16'd20, {`OP_TID, `REG_4, 8'd0});
+    load_word(16'd21, {`OP_LDI, `REG_1, 8'd1});
+    load_word(16'd22, {`OP_LDI, `REG_2, 8'd2});
+    load_word(16'd23, {`OP_HALT, 11'd0});
 
     repeat (2) tick;
     reset = 1'b0;

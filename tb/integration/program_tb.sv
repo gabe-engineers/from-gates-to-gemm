@@ -88,11 +88,12 @@ module program_tb;
     // throughout, so neither the CPU nor the GPU touches memory while loading.
     index = 0;
     while ($fgets(program_line, program_handle)) begin
-      if (index >= 512) $fatal(1, "program exceeds the 512-word RAM: %s", program_file);
+      if (index >= 4096) $fatal(1, "program exceeds the 4096-word RAM: %s", program_file);
 
       scan_result = $sscanf(program_line, "%h", program_word);
       if (scan_result != 1) $fatal(1, "invalid hex word in program file: %s", program_file);
 
+      @(negedge clk);
       load_enable  = 1'b1;
       load_address = index;
       load_data    = program_word;
@@ -112,7 +113,8 @@ module program_tb;
       while ($fgets(data_line, data_handle)) begin
         scan_result = $sscanf(data_line, "%h", data_word);
         if (scan_result == 1) begin
-          if (index >= 512) $fatal(1, "data image exceeds the 512-word RAM: %s", data_file);
+          if (index >= 4096) $fatal(1, "data image exceeds the 4096-word RAM: %s", data_file);
+          @(negedge clk);
           load_enable  = 1'b1;
           load_address = index;
           load_data    = data_word;
@@ -123,6 +125,7 @@ module program_tb;
       $fclose(data_handle);
       $display("Loaded %0d data words from %s at address %0d.", index - data_base, data_file, data_base);
     end
+    @(negedge clk);
     load_enable = 1'b0;
 
     // Release reset and run until the CPU halts (after any GWAIT completes).
@@ -148,8 +151,8 @@ module program_tb;
     $display(
         "mem[%0d] = 0x%04h (%0d)",
         result_address,
-        dut.memory_module.register_out[result_address],
-        dut.memory_module.register_out[result_address]
+        dut.memory_module.ram[result_address],
+        dut.memory_module.ram[result_address]
     );
     $finish;
   end

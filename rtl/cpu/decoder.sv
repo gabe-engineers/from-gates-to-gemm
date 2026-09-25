@@ -62,6 +62,11 @@ module decoder (
         out.address = {5'b0, instruction_data[10:0]};
       end
 
+      // JR jumps to the address held in a register, so route it to read port A.
+      `OP_JR: begin
+        out.src_reg_a = instruction_data[10:8];
+      end
+
       `OP_GLAUNCH: begin
         out.address = {5'b0, instruction_data[10:0]};
         out.gpu_command = gpu_types::GPU_COMMAND_LAUNCH;

@@ -25,3 +25,4 @@
 `define OP_GLAUNCH 5'h18
 `define OP_GWAIT 5'h19
 `define OP_JLT 5'h1A
+`define OP_JR 5'h1B

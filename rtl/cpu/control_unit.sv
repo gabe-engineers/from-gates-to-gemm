@@ -52,12 +52,17 @@ module control_unit (
       .out             (decoder_out)
   );
 
+  // JR takes its target from a register; every other PC load uses the decoded
+  // address field (JMP/JZ/JLT, GWAIT resume).
+  wire [15:0] pc_write_data =
+      decoder_out.opcode == `OP_JR ? datapath_read_data_a : decoder_out.address;
+
   program_counter pc_module (
       .clk         (clk),
       .reset       (reset),
       .advance     (advance_pc),
       .write_enable(write_enable_pc),
-      .write_data  (decoder_out.address),
+      .write_data  (pc_write_data),
       .data_out    (pc)
   );
 
@@ -129,6 +134,7 @@ module control_unit (
   assign write_enable_pc =
       (fsm_out_state == `FSM_EXECUTE &&
        (decoder_out.opcode == `OP_JMP ||
+        decoder_out.opcode == `OP_JR ||
         (decoder_out.opcode == `OP_JZ && cmp_equal_flag) ||
         (decoder_out.opcode == `OP_JLT && cmp_less_flag))) ||
       gwait_resume;

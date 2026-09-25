@@ -46,11 +46,12 @@ module alu_16bit (
       default:     result = 16'b0;
     endcase
 
-    // Comparison flags. CMP aliases the subtracter, so zero_flag is equality
-    // and less_than_flag is a signed compare; the sign-aware form stays correct
-    // when the subtraction overflows (raw result[15] does not).
+    // Comparison flags. CMP aliases the subtracter, so zero_flag is equality and
+    // less_than_flag is a signed compare taken from the difference: when the
+    // signs differ the negative operand is smaller, otherwise the subtraction
+    // cannot overflow and its MSB is the sign of a - b.
     zero_flag      = result == 16'b0;
-    less_than_flag = $signed(operand_a) < $signed(operand_b);
+    less_than_flag = (operand_a[15] ^ operand_b[15]) ? operand_a[15] : result[15];
   end
 
 endmodule

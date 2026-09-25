@@ -1,6 +1,9 @@
-`include "register.sv"
 `include "cpu_types.svh"
 `include "gpu_types.svh"
+
+// Installed RAM size. Kept below 2^15 so the sign bit of an address difference
+// stays meaningful for range/mask comparisons.
+localparam int MEMORY_WORDS = 4096;
 
 module memory (
     input                                            clk,
@@ -14,62 +17,41 @@ module memory (
     output                                    [15:0] cpu_read_data,
     output gpu_types::warp_mem_response_t            gpu_read_response
 );
-  wire [15:0] register_out[0:511];
+  logic [15:0] ram[0:MEMORY_WORDS-1];
   wire [7:0][15:0] gpu_read_words;
 
-  // Access outside the implemented 512-word RAM is architecturally undefined.
-  assign cpu_read_data = register_out[cpu_mem_request.address];
+  // Access outside the installed RAM is architecturally undefined.
+  assign cpu_read_data = ram[cpu_mem_request.address];
 
   generate
-    for (genvar i = 0; i < 512; i++) begin : memory_words
-      wire cpu_writes_this_word;
-      wire load_writes_this_word;
-      wire [7:0] gpu_writes_this_word;
-      wire [15:0] gpu_write_data_this_word;
-
-      assign load_writes_this_word = load_enable && (load_address == i);
-
-      assign cpu_writes_this_word =
-          cpu_mem_request.write_enable && (cpu_mem_request.address == i);
-
-      for (genvar gpu_i = 0; gpu_i < 8; gpu_i++) begin : gpu_writes
-        assign gpu_writes_this_word[gpu_i] =
-            gpu_mem_request.write_enable && (gpu_mem_request.address[gpu_i] == i);
-      end
-
-      // If GPU lanes target the same word, the highest-numbered lane wins.
-      // CPU priority below remains higher than every GPU lane.
-      assign gpu_write_data_this_word =
-          gpu_writes_this_word[7] ? gpu_mem_request.write_data[7] :
-          gpu_writes_this_word[6] ? gpu_mem_request.write_data[6] :
-          gpu_writes_this_word[5] ? gpu_mem_request.write_data[5] :
-          gpu_writes_this_word[4] ? gpu_mem_request.write_data[4] :
-          gpu_writes_this_word[3] ? gpu_mem_request.write_data[3] :
-          gpu_writes_this_word[2] ? gpu_mem_request.write_data[2] :
-          gpu_writes_this_word[1] ? gpu_mem_request.write_data[1] :
-                                   gpu_mem_request.write_data[0];
-
-      register register (
-          .clk(clk),
-          .reset(1'b0),
-          .write_enable(cpu_writes_this_word || |gpu_writes_this_word || load_writes_this_word),
-          // Priority: program load, then CPU, then GPU. The CPU wins if both
-          // run-time ports write the same word on the same clock edge.
-          .data_in(
-              load_writes_this_word ? load_data :
-              cpu_writes_this_word ? cpu_mem_request.write_data : gpu_write_data_this_word
-          ),
-          .data_out(register_out[i])
-      );
-    end
-
     for (genvar gpu_i = 0; gpu_i < 8; gpu_i++) begin : gpu_reads
-      assign gpu_read_words[gpu_i] =
-          register_out[gpu_mem_request.address[gpu_i]];
+      assign gpu_read_words[gpu_i] = ram[gpu_mem_request.address[gpu_i]];
     end
   endgenerate
 
   assign gpu_read_response.read_data = gpu_read_words;
 
+  // One write port per source, resolved by priority in a single clocked block:
+  // program load beats the CPU, which beats every GPU lane, and the
+  // highest-numbered GPU lane wins among lanes (later nonblocking assigns win).
+  always @(posedge clk) begin
+    if (gpu_mem_request.write_enable) begin
+      ram[gpu_mem_request.address[0]] <= gpu_mem_request.write_data[0];
+      ram[gpu_mem_request.address[1]] <= gpu_mem_request.write_data[1];
+      ram[gpu_mem_request.address[2]] <= gpu_mem_request.write_data[2];
+      ram[gpu_mem_request.address[3]] <= gpu_mem_request.write_data[3];
+      ram[gpu_mem_request.address[4]] <= gpu_mem_request.write_data[4];
+      ram[gpu_mem_request.address[5]] <= gpu_mem_request.write_data[5];
+      ram[gpu_mem_request.address[6]] <= gpu_mem_request.write_data[6];
+      ram[gpu_mem_request.address[7]] <= gpu_mem_request.write_data[7];
+    end
+    if (cpu_mem_request.write_enable)
+      ram[cpu_mem_request.address] <= cpu_mem_request.write_data;
+    if (load_enable) ram[load_address] <= load_data;
+  end
 
+  // Registers power up at zero so a program sees empty RAM before it writes.
+  initial begin
+    for (int i = 0; i < MEMORY_WORDS; i = i + 1) ram[i] = 16'b0;
+  end
 endmodule

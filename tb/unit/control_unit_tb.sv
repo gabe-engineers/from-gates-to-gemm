@@ -80,6 +80,20 @@ module control_unit_tb;
     if (!out.halted)
       $fatal(1, "control unit did not hold HALT state");
 
+    // JR loads the PC from a scalar register rather than the decoded address.
+    reset = 1'b1;
+    datapath_read_data_a = 16'd7;
+    memory[0] = {`OP_JR, `REG_8, 8'd0};
+    memory[7] = {`OP_HALT, 11'd0};
+    tick;
+    reset = 1'b0;
+    tick;
+    if (out.datapath_src_reg_a !== `REG_8)
+      $fatal(1, "JR did not select its register on read port A");
+    tick;
+    if (out.mem_addr !== 16'd7)
+      $fatal(1, "JR did not load the PC from the register");
+
     $display("control_unit_tb passed");
     $finish;
   end
