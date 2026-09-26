@@ -2,12 +2,12 @@
 `include "gpu_types.svh"
 
 module chip (
-    input  clk,
-    input  reset,
+    input clk,
+    input reset,
     // Program load port, wired straight to the RAM. Hold reset while loading.
-    input  load_enable,
-    input  [15:0] load_address,
-    input  [15:0] load_data,
+    input load_enable,
+    input [15:0] load_address,
+    input [15:0] load_data,
     output halted
 );
 

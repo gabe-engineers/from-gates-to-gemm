@@ -26,8 +26,9 @@ module vector_register_tb;
   task expect_lane(input integer lane, input [15:0] expected_data);
     begin
       if (data_out[lane] !== expected_data)
-        $fatal(1, "vector register lane %0d: got %h, expected %h", lane,
-               data_out[lane], expected_data);
+        $fatal(
+            1, "vector register lane %0d: got %h, expected %h", lane, data_out[lane], expected_data
+        );
     end
   endtask
 

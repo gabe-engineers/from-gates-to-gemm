@@ -9,7 +9,7 @@ module control_unit (
     input                                         [15:0] datapath_read_data_b,
     input                                                datapath_zero_flag,
     input                                                datapath_less_than_flag,
-    input gpu_types::gpu_state_t                         gpu_state,
+    input  gpu_types::gpu_state_t                        gpu_state,
     output wire cpu_types_pkg::control_unit_out_t        out
 );
 
@@ -88,10 +88,10 @@ module control_unit (
   always @(posedge clk) begin
     if (reset) begin
       cmp_equal_flag <= 1'b0;
-      cmp_less_flag <= 1'b0;
+      cmp_less_flag  <= 1'b0;
     end else if (fsm_out_state == `FSM_EXECUTE && decoder_out.opcode == `OP_CMP) begin
       cmp_equal_flag <= datapath_zero_flag;
-      cmp_less_flag <= datapath_less_than_flag;
+      cmp_less_flag  <= datapath_less_than_flag;
     end
   end
 

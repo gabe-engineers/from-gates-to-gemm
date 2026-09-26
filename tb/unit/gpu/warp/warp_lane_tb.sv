@@ -30,8 +30,7 @@ module warp_lane_tb;
     begin
       #1;
       if (response.value !== expected_response)
-        $fatal(1, "warp lane response: got %h, expected %h", response.value,
-               expected_response);
+        $fatal(1, "warp lane response: got %h, expected %h", response.value, expected_response);
     end
   endtask
 
@@ -70,12 +69,10 @@ module warp_lane_tb;
     warp_request.src_reg_a = `REG_2;
     warp_request.src_reg_b = `REG_3;
     #1;
-    if (!response.operands_equal)
-      $fatal(1, "lane reported inequality for two equal registers");
+    if (!response.operands_equal) $fatal(1, "lane reported inequality for two equal registers");
     warp_request.src_reg_b = `REG_4;
     #1;
-    if (response.operands_equal)
-      $fatal(1, "lane reported equality for two unequal registers");
+    if (response.operands_equal) $fatal(1, "lane reported equality for two unequal registers");
 
     // TID writes this lane's fixed ID into r5.
     warp_request.dst_reg = `REG_5;

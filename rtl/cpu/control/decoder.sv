@@ -2,7 +2,7 @@
 `include "cpu_types.svh"
 
 module decoder (
-    input  [15:0] instruction_data,
+    input [15:0] instruction_data,
     output cpu_types_pkg::decoder_out_t out
 );
 

@@ -3,22 +3,22 @@
 // tests/assembler/test_assembler.py generates that file with tools/assembler.py before compiling
 // and running this testbench.
 module assembler_cpu_tb;
-  logic         clk;
-  logic         reset;
-  logic  [15:0] memory [0:511];
-  wire [15:0] mem_read_data;
-  wire cpu_types_pkg::cpu_mem_request_t mem_request;
-  wire        halted;
-  integer     index;
-  integer     cycles;
+  logic                                        clk;
+  logic                                        reset;
+  logic                                 [15:0] memory        [0:511];
+  wire                                  [15:0] mem_read_data;
+  wire cpu_types_pkg::cpu_mem_request_t        mem_request;
+  wire                                         halted;
+  integer                                      index;
+  integer                                      cycles;
 
   cpu dut (
-      .clk             (clk),
-      .reset           (reset),
-      .mem_read_data   (mem_read_data),
-      .gpu_state       (gpu_types::GPU_STATE_IDLE),
-      .mem_request     (mem_request),
-      .halted          (halted)
+      .clk          (clk),
+      .reset        (reset),
+      .mem_read_data(mem_read_data),
+      .gpu_state    (gpu_types::GPU_STATE_IDLE),
+      .mem_request  (mem_request),
+      .halted       (halted)
   );
 
   assign mem_read_data = memory[mem_request.address];
@@ -26,8 +26,7 @@ module assembler_cpu_tb;
   always #5 clk = ~clk;
 
   always @(posedge clk) begin
-    if (mem_request.write_enable)
-      memory[mem_request.address] <= mem_request.write_data;
+    if (mem_request.write_enable) memory[mem_request.address] <= mem_request.write_data;
   end
 
   initial begin
@@ -35,8 +34,7 @@ module assembler_cpu_tb;
     reset = 1'b1;
     cycles = 0;
 
-    for (index = 0; index < 512; index = index + 1)
-      memory[index] = 16'b0;
+    for (index = 0; index < 512; index = index + 1) memory[index] = 16'b0;
 
     $readmemh("program.hex", memory);
 
@@ -68,8 +66,7 @@ module assembler_cpu_tb;
     end
     #1;
 
-    if (!halted)
-      $fatal(1, "assembler program did not halt within %0d cycles", cycles);
+    if (!halted) $fatal(1, "assembler program did not halt within %0d cycles", cycles);
 
     // The assembler test builds addresses above 255 with LUI and OR,
     // then exercises scalar memory, all vector operations, and HALT.
@@ -79,8 +76,7 @@ module assembler_cpu_tb;
     if (memory[401] !== 16'd12)
       $fatal(1, "assembled program loaded/stored %0d at address 401; expected 12", memory[401]);
 
-    if (memory[402] !== 16'd7)
-      $fatal(1, "VLD unexpectedly changed scalar r1 to %0d", memory[402]);
+    if (memory[402] !== 16'd7) $fatal(1, "VLD unexpectedly changed scalar r1 to %0d", memory[402]);
 
     if (memory[403] !== 16'd2040)
       $fatal(1, "VDOT stored %0d at address 403; expected 2040", memory[403]);
@@ -89,9 +85,18 @@ module assembler_cpu_tb;
         memory[202] !== 16'd30 || memory[203] !== 16'd40 ||
         memory[204] !== 16'd50 || memory[205] !== 16'd60 ||
         memory[206] !== 16'd70 || memory[207] !== 16'd80)
-      $fatal(1, "VLD/VST lanes: %0d %0d %0d %0d %0d %0d %0d %0d",
-             memory[200], memory[201], memory[202], memory[203],
-             memory[204], memory[205], memory[206], memory[207]);
+      $fatal(
+          1,
+          "VLD/VST lanes: %0d %0d %0d %0d %0d %0d %0d %0d",
+          memory[200],
+          memory[201],
+          memory[202],
+          memory[203],
+          memory[204],
+          memory[205],
+          memory[206],
+          memory[207]
+      );
 
     if (memory[300] !== 16'd11 || memory[301] !== 16'd22 ||
         memory[302] !== 16'd33 || memory[303] !== 16'd44 ||

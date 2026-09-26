@@ -1,11 +1,11 @@
 
 module register_tb;
 
-  logic         reset;
-  logic         write_enable;
-  logic         clk;
-  logic  [15:0] data_in;
-  wire [15:0] data_out;
+  logic        reset;
+  logic        write_enable;
+  logic        clk;
+  logic [15:0] data_in;
+  wire  [15:0] data_out;
 
   register dut (
       clk,

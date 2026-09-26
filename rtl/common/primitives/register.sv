@@ -4,11 +4,11 @@
 module register #(
     parameter BITWIDTH = 16
 ) (
-    input  wire                  clk,
-    input  wire                  reset,
-    input  wire                  write_enable,
-    input  wire [BITWIDTH - 1:0] data_in,
-    output logic  [BITWIDTH - 1:0] data_out = {BITWIDTH{1'b0}}
+    input  wire                   clk,
+    input  wire                   reset,
+    input  wire                   write_enable,
+    input  wire  [BITWIDTH - 1:0] data_in,
+    output logic [BITWIDTH - 1:0] data_out = {BITWIDTH{1'b0}}
 );
 
   always @(posedge clk) begin

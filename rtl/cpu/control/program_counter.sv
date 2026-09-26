@@ -1,10 +1,10 @@
 
 module program_counter (
-    input             clk,
-    input             reset,
-    input             advance,
-    input             write_enable,
-    input      [15:0] write_data,
+    input              clk,
+    input              reset,
+    input              advance,
+    input              write_enable,
+    input       [15:0] write_data,
     output wire [15:0] data_out
 );
 
@@ -13,7 +13,9 @@ module program_counter (
   wire reg_write_enable = write_enable | advance;
   wire [15:0] reg_data_in = write_enable ? write_data : incrementer_out;
 
-  register #(.BITWIDTH(16)) pc_register (
+  register #(
+      .BITWIDTH(16)
+  ) pc_register (
       .clk         (clk),
       .reset       (reset),
       .write_enable(reg_write_enable),

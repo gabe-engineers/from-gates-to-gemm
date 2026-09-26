@@ -4,26 +4,26 @@ module gates;
   logic a;
   logic b;
 
-  wire and_out;
-  wire or_out;
-  wire xor_out;
+  wire  and_out;
+  wire  or_out;
+  wire  xor_out;
 
   and_gate and_dut (
-    a,
-    b,
-    and_out
+      a,
+      b,
+      and_out
   );
 
   or_gate or_dut (
-    a,
-    b,
-    or_out
+      a,
+      b,
+      or_out
   );
 
   xor_gate xor_dut (
-    a,
-    b,
-    xor_out
+      a,
+      b,
+      xor_out
   );
 
   initial begin

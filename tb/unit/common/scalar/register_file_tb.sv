@@ -2,27 +2,27 @@
 
 module register_file_tb;
 
-  logic         clk;
-  logic         reset;
-  logic         write_enable;
-  logic  [ 2:0] write_addr;
-  logic  [15:0] write_data;
-  logic  [ 2:0] read_addr_a;
-  logic  [ 2:0] read_addr_b;
-  wire [15:0] read_data_a;
-  wire [15:0] read_data_b;
-  wire [15:0] write_reg_data;
+  logic        clk;
+  logic        reset;
+  logic        write_enable;
+  logic [ 2:0] write_addr;
+  logic [15:0] write_data;
+  logic [ 2:0] read_addr_a;
+  logic [ 2:0] read_addr_b;
+  wire  [15:0] read_data_a;
+  wire  [15:0] read_data_b;
+  wire  [15:0] write_reg_data;
 
   register_file dut (
-      .clk         (clk),
-      .reset       (reset),
-      .write_enable(write_enable),
-      .write_addr  (write_addr),
-      .write_data  (write_data),
-      .read_addr_a (read_addr_a),
-      .read_addr_b (read_addr_b),
-      .read_data_a (read_data_a),
-      .read_data_b (read_data_b),
+      .clk           (clk),
+      .reset         (reset),
+      .write_enable  (write_enable),
+      .write_addr    (write_addr),
+      .write_data    (write_data),
+      .read_addr_a   (read_addr_a),
+      .read_addr_b   (read_addr_b),
+      .read_data_a   (read_data_a),
+      .read_data_b   (read_data_b),
       .write_reg_data(write_reg_data)
   );
 
@@ -48,7 +48,8 @@ module register_file_tb;
         $display(
             "FAILED Test #%d: reset=%b we=%b wa=%d wd=%h ra=%d rb=%d | got a=%h b=%h write_reg=%h | expected a=%h b=%h write_reg=%h",
             test_number, reset, write_enable, write_addr, write_data, read_addr_a, read_addr_b,
-            read_data_a, read_data_b, write_reg_data, expected_a, expected_b, expected_write_reg_data);
+            read_data_a, read_data_b, write_reg_data, expected_a, expected_b,
+            expected_write_reg_data);
       end
     end
   endtask

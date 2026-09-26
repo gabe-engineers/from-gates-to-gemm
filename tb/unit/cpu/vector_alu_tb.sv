@@ -1,27 +1,32 @@
 
 module vector_alu_tb;
-  logic  [ 4:0] operation;
-  logic  [127:0] a;
-  logic  [127:0] b;
-  wire [127:0] out;
-  wire [15:0] dot_product;
+  logic [  4:0] operation;
+  logic [127:0] a;
+  logic [127:0] b;
+  wire  [127:0] out;
+  wire  [ 15:0] dot_product;
 
   vector_alu_16bit dut (
-      .operation(operation),
-      .a        (a),
-      .b        (b),
-      .out      (out),
+      .operation  (operation),
+      .a          (a),
+      .b          (b),
+      .out        (out),
       .dot_product(dot_product)
   );
 
-  task test_case(input [7:0] test_number, input [4:0] tc_operation,
-                 input [127:0] expected_out);
+  task test_case(input [7:0] test_number, input [4:0] tc_operation, input [127:0] expected_out);
     begin
       operation = tc_operation;
       #1;
       if (out !== expected_out)
-        $fatal(1, "Test case #%d failed - operation: %b | got: %h, expected: %h",
-               test_number, operation, out, expected_out);
+        $fatal(
+            1,
+            "Test case #%d failed - operation: %b | got: %h, expected: %h",
+            test_number,
+            operation,
+            out,
+            expected_out
+        );
     end
   endtask
 
@@ -38,8 +43,7 @@ module vector_alu_tb;
               .expected_out(128'h0280_01EA_0168_00FA_00A0_005A_0028_000A));
     test_case(.test_number(4), .tc_operation(`OP_VDOT),
               .expected_out(128'h0280_01EA_0168_00FA_00A0_005A_0028_000A));
-    if (dot_product !== 16'd2040)
-      $fatal(1, "VDOT produced %0d; expected 2040", dot_product);
+    if (dot_product !== 16'd2040) $fatal(1, "VDOT produced %0d; expected 2040", dot_product);
 
     $finish;
   end

@@ -71,21 +71,18 @@ module chip_tb;
     while (!halted && cycles < 40) begin
       tick;
       cycles = cycles + 1;
-      if (dut.gpu_module.gpu_state == gpu_types::GPU_STATE_RUNNING)
-        saw_gpu_running = 1'b1;
-      if (dut.cpu_module.control_unit_module.fsm_out_state == `FSM_GPU_WAIT)
-        saw_cpu_wait = 1'b1;
+      if (dut.gpu_module.gpu_state == gpu_types::GPU_STATE_RUNNING) saw_gpu_running = 1'b1;
+      if (dut.cpu_module.control_unit_module.fsm_out_state == `FSM_GPU_WAIT) saw_cpu_wait = 1'b1;
     end
     #1;
 
-    if (!halted)
-      $fatal(1, "chip did not halt its CPU/GPU integration program");
+    if (!halted) $fatal(1, "chip did not halt its CPU/GPU integration program");
     if (dut.cpu_module.datapath.registers.data_out[`REG_3] !== 16'd12)
-      $fatal(1, "chip CPU produced %0d instead of 12", dut.cpu_module.datapath.registers.data_out[2]);
-    if (!saw_gpu_running)
-      $fatal(1, "GLAUNCH never transitioned the GPU to RUNNING");
-    if (!saw_cpu_wait)
-      $fatal(1, "GWAIT did not stall the CPU while the GPU was running");
+      $fatal(
+          1, "chip CPU produced %0d instead of 12", dut.cpu_module.datapath.registers.data_out[2]
+      );
+    if (!saw_gpu_running) $fatal(1, "GLAUNCH never transitioned the GPU to RUNNING");
+    if (!saw_cpu_wait) $fatal(1, "GWAIT did not stall the CPU while the GPU was running");
     if (dut.gpu_module.gpu_state !== gpu_types::GPU_STATE_IDLE)
       $fatal(1, "GPU did not return to IDLE after completing its kernel");
     if (dut.gpu_module.warp_module.datapath_module.warp_lanes[7].lane_module.reg_file.data_out[`REG_4]

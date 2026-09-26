@@ -11,9 +11,8 @@ module warp_decoder_tb;
   );
 
   // Unused operand fields are left as 3'd0, since r1 also encodes as zero.
-  task expect_valid(input [15:0] instruction, input [4:0] opcode,
-                    input [2:0] dst_reg, input [2:0] src_reg_a,
-                    input [2:0] src_reg_b, input [15:0] immediate,
+  task expect_valid(input [15:0] instruction, input [4:0] opcode, input [2:0] dst_reg,
+                    input [2:0] src_reg_a, input [2:0] src_reg_b, input [15:0] immediate,
                     input [15:0] address);
     begin
       instruction_data = instruction;
@@ -43,45 +42,38 @@ module warp_decoder_tb;
     if (decoder_out.valid !== 1'b1 || decoder_out.opcode !== `OP_LDI)
       $fatal(1, "warp decoder is undefined for the all-zero instruction at power-up");
 
-    expect_valid(.instruction({`OP_LDI, `REG_7, 8'hA5}), .opcode(`OP_LDI),
-                 .dst_reg(`REG_7), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'h00A5), .address(16'd0));
+    expect_valid(.instruction({`OP_LDI, `REG_7, 8'hA5}), .opcode(`OP_LDI), .dst_reg(`REG_7),
+                 .src_reg_a(3'd0), .src_reg_b(3'd0), .immediate(16'h00A5), .address(16'd0));
 
     expect_valid(.instruction({`OP_ADD, `REG_2, `REG_3, `REG_4, 2'd0}), .opcode(`OP_ADD),
-                 .dst_reg(`REG_2), .src_reg_a(`REG_3), .src_reg_b(`REG_4),
-                 .immediate(16'd0), .address(16'd0));
+                 .dst_reg(`REG_2), .src_reg_a(`REG_3), .src_reg_b(`REG_4), .immediate(16'd0),
+                 .address(16'd0));
 
-    expect_valid(.instruction({`OP_TID, `REG_5, 8'd0}), .opcode(`OP_TID),
-                 .dst_reg(`REG_5), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'd0), .address(16'd0));
+    expect_valid(.instruction({`OP_TID, `REG_5, 8'd0}), .opcode(`OP_TID), .dst_reg(`REG_5),
+                 .src_reg_a(3'd0), .src_reg_b(3'd0), .immediate(16'd0), .address(16'd0));
 
     expect_valid(.instruction({`OP_LOAD, `REG_2, `REG_3, 5'd0}), .opcode(`OP_LOAD),
-                 .dst_reg(`REG_2), .src_reg_a(3'd0), .src_reg_b(`REG_3),
-                 .immediate(16'd0), .address(16'd0));
+                 .dst_reg(`REG_2), .src_reg_a(3'd0), .src_reg_b(`REG_3), .immediate(16'd0),
+                 .address(16'd0));
 
     expect_valid(.instruction({`OP_STORE, `REG_2, `REG_3, 5'd0}), .opcode(`OP_STORE),
-                 .dst_reg(3'd0), .src_reg_a(`REG_3), .src_reg_b(`REG_2),
-                 .immediate(16'd0), .address(16'd0));
+                 .dst_reg(3'd0), .src_reg_a(`REG_3), .src_reg_b(`REG_2), .immediate(16'd0),
+                 .address(16'd0));
 
-    expect_valid(.instruction({`OP_CMP, `REG_2, `REG_3, 5'd0}), .opcode(`OP_CMP),
-                 .dst_reg(3'd0), .src_reg_a(`REG_2), .src_reg_b(`REG_3),
-                 .immediate(16'd0), .address(16'd0));
+    expect_valid(.instruction({`OP_CMP, `REG_2, `REG_3, 5'd0}), .opcode(`OP_CMP), .dst_reg(3'd0),
+                 .src_reg_a(`REG_2), .src_reg_b(`REG_3), .immediate(16'd0), .address(16'd0));
 
-    expect_valid(.instruction({`OP_JMP, 11'h7FF}), .opcode(`OP_JMP),
-                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'd0), .address(16'h07FF));
+    expect_valid(.instruction({`OP_JMP, 11'h7FF}), .opcode(`OP_JMP), .dst_reg(3'd0),
+                 .src_reg_a(3'd0), .src_reg_b(3'd0), .immediate(16'd0), .address(16'h07FF));
 
-    expect_valid(.instruction({`OP_JZ, 11'h123}), .opcode(`OP_JZ),
-                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'd0), .address(16'h0123));
+    expect_valid(.instruction({`OP_JZ, 11'h123}), .opcode(`OP_JZ), .dst_reg(3'd0), .src_reg_a(3'd0),
+                 .src_reg_b(3'd0), .immediate(16'd0), .address(16'h0123));
 
-    expect_valid(.instruction({`OP_JLT, 11'h123}), .opcode(`OP_JLT),
-                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'd0), .address(16'h0123));
+    expect_valid(.instruction({`OP_JLT, 11'h123}), .opcode(`OP_JLT), .dst_reg(3'd0),
+                 .src_reg_a(3'd0), .src_reg_b(3'd0), .immediate(16'd0), .address(16'h0123));
 
-    expect_valid(.instruction({`OP_HALT, 11'd0}), .opcode(`OP_HALT),
-                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
-                 .immediate(16'd0), .address(16'd0));
+    expect_valid(.instruction({`OP_HALT, 11'd0}), .opcode(`OP_HALT), .dst_reg(3'd0),
+                 .src_reg_a(3'd0), .src_reg_b(3'd0), .immediate(16'd0), .address(16'd0));
 
     expect_invalid(.instruction({`OP_VADD, `REG_2, `REG_3, `REG_4, 2'd0}));
     expect_invalid(.instruction({`OP_VDOT, `REG_2, `REG_3, `REG_4, 2'd0}));

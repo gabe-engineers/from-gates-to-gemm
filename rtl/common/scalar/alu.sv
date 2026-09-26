@@ -33,16 +33,16 @@ module alu_16bit (
 
   always @(*) begin
     case (operation)
-      `ALU_OP_MOV: result = operand_a;
-      `ALU_OP_ADD: result = add_out;
+      `ALU_OP_MOV:              result = operand_a;
+      `ALU_OP_ADD:              result = add_out;
       `ALU_OP_SUB, `ALU_OP_CMP: result = sub_out;
-      `ALU_OP_AND: result = operand_a & operand_b;
-      `ALU_OP_OR: result = operand_a | operand_b;
-      `ALU_OP_XOR: result = operand_a ^ operand_b;
-      `ALU_OP_SHL: result = operand_a << operand_b;
-      `ALU_OP_SHR: result = operand_a >> operand_b;
-      `ALU_OP_MUL: result = operand_a * operand_b;
-      default:     result = 16'b0;
+      `ALU_OP_AND:              result = operand_a & operand_b;
+      `ALU_OP_OR:               result = operand_a | operand_b;
+      `ALU_OP_XOR:              result = operand_a ^ operand_b;
+      `ALU_OP_SHL:              result = operand_a << operand_b;
+      `ALU_OP_SHR:              result = operand_a >> operand_b;
+      `ALU_OP_MUL:              result = operand_a * operand_b;
+      default:                  result = 16'b0;
     endcase
 
     // Comparison flags. CMP aliases the subtracter, so zero_flag is equality and

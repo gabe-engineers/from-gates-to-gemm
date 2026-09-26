@@ -4,30 +4,30 @@ module vector_register_file_tb;
   logic         clk;
   logic         reset;
   logic         write_enable;
-  logic  [ 2:0] write_addr;
-  logic  [ 2:0] write_lane;
-  logic  [15:0] write_data;
-  logic  [ 2:0] read_addr;
-  logic  [ 2:0] read_lane;
-  wire [15:0] read_data;
+  logic [  2:0] write_addr;
+  logic [  2:0] write_lane;
+  logic [ 15:0] write_data;
+  logic [  2:0] read_addr;
+  logic [  2:0] read_lane;
+  wire  [ 15:0] read_data;
   logic         vector_alu_write_enable;
-  logic  [ 2:0] vector_alu_write_addr;
-  logic  [127:0] vector_alu_write_data;
-  logic  [ 2:0] vector_alu_read_addr_a;
-  logic  [ 2:0] vector_alu_read_addr_b;
-  wire [127:0] vector_alu_read_data_a;
-  wire [127:0] vector_alu_read_data_b;
+  logic [  2:0] vector_alu_write_addr;
+  logic [127:0] vector_alu_write_data;
+  logic [  2:0] vector_alu_read_addr_a;
+  logic [  2:0] vector_alu_read_addr_b;
+  wire  [127:0] vector_alu_read_data_a;
+  wire  [127:0] vector_alu_read_data_b;
 
   vector_register_file dut (
-      .clk         (clk),
-      .reset       (reset),
-      .write_enable(write_enable),
-      .write_addr  (write_addr),
-      .write_lane  (write_lane),
-      .write_data  (write_data),
-      .read_addr   (read_addr),
-      .read_lane   (read_lane),
-      .read_data   (read_data),
+      .clk                    (clk),
+      .reset                  (reset),
+      .write_enable           (write_enable),
+      .write_addr             (write_addr),
+      .write_lane             (write_lane),
+      .write_data             (write_data),
+      .read_addr              (read_addr),
+      .read_lane              (read_lane),
+      .read_data              (read_data),
       .vector_alu_write_enable(vector_alu_write_enable),
       .vector_alu_write_addr  (vector_alu_write_addr),
       .vector_alu_write_data  (vector_alu_write_data),
@@ -54,8 +54,14 @@ module vector_register_file_tb;
       read_lane = expected_lane;
       #1;
       if (read_data !== expected_data)
-        $fatal(1, "v%0d lane %0d: got %h, expected %h", expected_addr + 1,
-               expected_lane, read_data, expected_data);
+        $fatal(
+            1,
+            "v%0d lane %0d: got %h, expected %h",
+            expected_addr + 1,
+            expected_lane,
+            read_data,
+            expected_data
+        );
     end
   endtask
 
@@ -79,9 +85,9 @@ module vector_register_file_tb;
     expect_lane(`VREG_8, 3'd7, 16'd0);
 
     write_enable = 1'b1;
-    write_addr = `VREG_1;
-    write_lane = 3'd0;
-    write_data = 16'h1111;
+    write_addr   = `VREG_1;
+    write_lane   = 3'd0;
+    write_data   = 16'h1111;
     tick;
 
     write_addr = `VREG_1;
@@ -100,16 +106,16 @@ module vector_register_file_tb;
     expect_lane(`VREG_2, 3'd7, 16'd0);
 
     write_enable = 1'b0;
-    write_addr = `VREG_1;
-    write_lane = 3'd0;
-    write_data = 16'hFFFF;
+    write_addr   = `VREG_1;
+    write_lane   = 3'd0;
+    write_data   = 16'hFFFF;
     tick;
     expect_lane(`VREG_1, 3'd0, 16'h1111);
 
     // A vector ALU write updates all eight lanes of the selected vector register.
     vector_alu_write_enable = 1'b1;
-    vector_alu_write_addr = `VREG_3;
-    vector_alu_write_data = 128'h0008_0007_0006_0005_0004_0003_0002_0001;
+    vector_alu_write_addr   = `VREG_3;
+    vector_alu_write_data   = 128'h0008_0007_0006_0005_0004_0003_0002_0001;
     tick;
     vector_alu_write_enable = 1'b0;
     expect_lane(`VREG_3, 3'd0, 16'h0001);

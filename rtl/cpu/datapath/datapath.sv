@@ -10,23 +10,23 @@ module datapath_16bit (
     output cpu_types_pkg::scalar_response_t     scalar_response,
     output cpu_types_pkg::vector_mem_response_t vector_mem_response
 );
-  wire [ 15:0] alu_out;
-  logic [15:0] write_data;
-  wire [127:0] vector_alu_read_data_a;
-  wire [127:0] vector_alu_read_data_b;
-  wire [127:0] vector_alu_out;
-  wire [ 15:0] vector_dot_product;
+  wire  [ 15:0] alu_out;
+  logic [ 15:0] write_data;
+  wire  [127:0] vector_alu_read_data_a;
+  wire  [127:0] vector_alu_read_data_b;
+  wire  [127:0] vector_alu_out;
+  wire  [ 15:0] vector_dot_product;
 
   // The vector dot product overrides the scalar source; otherwise the source
   // selects the immediate, the lane/thread id, or the ALU result.
   always_comb begin
-    if (vector_alu_request.dot_writeback_select)
-      write_data = vector_dot_product;
-    else case (scalar_request.writeback_source)
-      control_helpers_pkg::WB_IMMEDIATE: write_data = scalar_request.immediate;
-      control_helpers_pkg::WB_THREAD_ID: write_data = {13'b0, scalar_request.thread_id};
-      default:                           write_data = alu_out;
-    endcase
+    if (vector_alu_request.dot_writeback_select) write_data = vector_dot_product;
+    else
+      case (scalar_request.writeback_source)
+        control_helpers_pkg::WB_IMMEDIATE: write_data = scalar_request.immediate;
+        control_helpers_pkg::WB_THREAD_ID: write_data = {13'b0, scalar_request.thread_id};
+        default:                           write_data = alu_out;
+      endcase
   end
 
   register_file registers (

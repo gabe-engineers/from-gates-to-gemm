@@ -20,18 +20,18 @@ module gpu (
   // The GPU owns dispatch lifetime. A command only starts an idle GPU;
   // another launch while work is active is deliberately a no-op.
   always @(posedge clk) begin
-    if (reset)
-      gpu_state <= gpu_types::GPU_STATE_IDLE;
-    else case (gpu_state)
-      gpu_types::GPU_STATE_IDLE: begin
-        if (gpu_dispatch.command == gpu_types::GPU_COMMAND_LAUNCH)
-          gpu_state <= gpu_types::GPU_STATE_RUNNING;
-      end
-      gpu_types::GPU_STATE_RUNNING: begin
-        if (warp_halted) gpu_state <= gpu_types::GPU_STATE_IDLE;
-      end
-      default: gpu_state <= gpu_types::GPU_STATE_IDLE;
-    endcase
+    if (reset) gpu_state <= gpu_types::GPU_STATE_IDLE;
+    else
+      case (gpu_state)
+        gpu_types::GPU_STATE_IDLE: begin
+          if (gpu_dispatch.command == gpu_types::GPU_COMMAND_LAUNCH)
+            gpu_state <= gpu_types::GPU_STATE_RUNNING;
+        end
+        gpu_types::GPU_STATE_RUNNING: begin
+          if (warp_halted) gpu_state <= gpu_types::GPU_STATE_IDLE;
+        end
+        default: gpu_state <= gpu_types::GPU_STATE_IDLE;
+      endcase
   end
 
   warp warp_module (

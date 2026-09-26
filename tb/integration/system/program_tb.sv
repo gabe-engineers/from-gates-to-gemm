@@ -20,27 +20,27 @@
 // the RAM word a program leaves its answer in.  The harness still contains no
 // program-specific data or assertions.
 module program_tb;
-  logic            clk;
-  logic            reset;
-  logic            load_enable;
-  logic     [15:0] load_address;
-  logic     [15:0] load_data;
-  wire             halted;
-  integer          index;
-  integer          cycles;
-  integer          max_cycles;
-  integer          data_base;
-  integer          result_address;
-  integer          program_handle;
-  integer          data_handle;
-  integer          scan_result;
-  logic     [15:0] program_word;
-  logic     [15:0] data_word;
-  string           program_file;
-  string           data_file;
-  string           program_line;
-  string           data_line;
-  string           waveform_file;
+  logic          clk;
+  logic          reset;
+  logic          load_enable;
+  logic   [15:0] load_address;
+  logic   [15:0] load_data;
+  wire           halted;
+  integer        index;
+  integer        cycles;
+  integer        max_cycles;
+  integer        data_base;
+  integer        result_address;
+  integer        program_handle;
+  integer        data_handle;
+  integer        scan_result;
+  logic   [15:0] program_word;
+  logic   [15:0] data_word;
+  string         program_file;
+  string         data_file;
+  string         program_line;
+  string         data_line;
+  string         waveform_file;
 
   chip dut (
       .clk         (clk),
@@ -86,7 +86,9 @@ module program_tb;
     // Load one hex word per clock edge into the chip RAM. Reset is asserted
     // throughout, so neither the CPU nor the GPU touches memory while loading.
     index = 0;
-    while ($fgets(program_line, program_handle)) begin
+    while ($fgets(
+        program_line, program_handle
+    )) begin
       if (index >= 4096) $fatal(1, "program exceeds the 4096-word RAM: %s", program_file);
 
       scan_result = $sscanf(program_line, "%h", program_word);
@@ -109,7 +111,9 @@ module program_tb;
       if (data_handle == 0) $fatal(1, "could not open data file: %s", data_file);
 
       index = data_base;
-      while ($fgets(data_line, data_handle)) begin
+      while ($fgets(
+          data_line, data_handle
+      )) begin
         scan_result = $sscanf(data_line, "%h", data_word);
         if (scan_result == 1) begin
           if (index >= 4096) $fatal(1, "data image exceeds the 4096-word RAM: %s", data_file);
@@ -122,7 +126,8 @@ module program_tb;
         end
       end
       $fclose(data_handle);
-      $display("Loaded %0d data words from %s at address %0d.", index - data_base, data_file, data_base);
+      $display("Loaded %0d data words from %s at address %0d.", index - data_base, data_file,
+               data_base);
     end
     @(negedge clk);
     load_enable = 1'b0;
@@ -147,12 +152,8 @@ module program_tb;
         dut.cpu_module.datapath.registers.data_out[index],
         dut.cpu_module.datapath.registers.data_out[index]
     );
-    $display(
-        "mem[%0d] = 0x%04h (%0d)",
-        result_address,
-        dut.memory_module.ram[result_address],
-        dut.memory_module.ram[result_address]
-    );
+    $display("mem[%0d] = 0x%04h (%0d)", result_address, dut.memory_module.ram[result_address],
+             dut.memory_module.ram[result_address]);
     $finish;
   end
 endmodule

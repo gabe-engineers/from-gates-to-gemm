@@ -53,9 +53,7 @@ package gpu_types;
     logic             write_enable;
   } gpu_mem_request_t;
 
-  typedef struct packed {
-    logic [7:0][15:0] read_data;
-  } gpu_mem_response_t;
+  typedef struct packed {logic [7:0][15:0] read_data;} gpu_mem_response_t;
 
   typedef gpu_mem_request_t warp_mem_request_t;
   typedef gpu_mem_response_t warp_mem_response_t;

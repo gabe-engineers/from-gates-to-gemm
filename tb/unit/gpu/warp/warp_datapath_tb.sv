@@ -61,7 +61,7 @@ module warp_datapath_tb;
     warp_request.dst_reg = `REG_5;
     warp_request.immediate = 16'hFFFF;
     tick;
-    warp_request.dst_reg = `REG_6;
+    warp_request.dst_reg   = `REG_6;
     warp_request.immediate = 16'h0000;
     tick;
     warp_request.write_enable = 1'b0;

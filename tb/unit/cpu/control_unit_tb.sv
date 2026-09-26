@@ -3,7 +3,7 @@
 module control_unit_tb;
   logic clk;
   logic reset;
-  logic [15:0] memory [0:15];
+  logic [15:0] memory[0:15];
   wire [15:0] mem_read_data;
   logic [15:0] datapath_read_data_a;
   logic [15:0] datapath_read_data_b;
@@ -56,8 +56,7 @@ module control_unit_tb;
 
     // Completing LDI advances the fetch address to the STORE instruction.
     tick;
-    if (out.mem_addr !== 16'd1)
-      $fatal(1, "control unit did not advance PC after LDI");
+    if (out.mem_addr !== 16'd1) $fatal(1, "control unit did not advance PC after LDI");
 
     // STORE enters MEMORY without scalar register writeback.
     tick;
@@ -70,14 +69,11 @@ module control_unit_tb;
 
     // The next instruction is HALT and remains halted thereafter.
     tick;
-    if (out.mem_addr !== 16'd2)
-      $fatal(1, "control unit did not return to the next fetch address");
+    if (out.mem_addr !== 16'd2) $fatal(1, "control unit did not return to the next fetch address");
     tick;
-    if (out.halted)
-      $fatal(1, "HALT asserted before its EXECUTE phase completed");
+    if (out.halted) $fatal(1, "HALT asserted before its EXECUTE phase completed");
     tick;
-    if (!out.halted)
-      $fatal(1, "control unit did not hold HALT state");
+    if (!out.halted) $fatal(1, "control unit did not hold HALT state");
 
     // JR loads the PC from a scalar register rather than the decoded address.
     reset = 1'b1;
@@ -90,8 +86,7 @@ module control_unit_tb;
     if (out.datapath_src_reg_a !== `REG_8)
       $fatal(1, "JR did not select its register on read port A");
     tick;
-    if (out.mem_addr !== 16'd7)
-      $fatal(1, "JR did not load the PC from the register");
+    if (out.mem_addr !== 16'd7) $fatal(1, "JR did not load the PC from the register");
 
     $display("control_unit_tb passed");
     $finish;

@@ -23,7 +23,8 @@ module cpu_tb;
   assign mem_read_data = memory[mem_request.address];
   always #5 clk = ~clk;
   always @(posedge clk)
-    if (mem_request.write_enable) memory[mem_request.address] <= mem_request.write_data;
+    if (mem_request.write_enable)
+      memory[mem_request.address] <= mem_request.write_data;
 
   initial begin
     clk = 0;
@@ -134,8 +135,7 @@ module cpu_tb;
       cycles = cycles + 1;
     end
     #1;
-    if (!halted)
-      $fatal(1, "CPU did not resume and halt after GWAIT");
+    if (!halted) $fatal(1, "CPU did not resume and halt after GWAIT");
     if (dut.datapath.registers.data_out[`REG_1] !== 16'd77)
       $fatal(1, "CPU did not execute the instruction after GWAIT");
 

@@ -64,8 +64,7 @@ module warp_control_unit_tb;
       $fatal(1, "invalid warp instruction enabled a lane register write");
     tick;
     #1;
-    if (!control_out.halted)
-      $fatal(1, "invalid warp instruction did not halt the warp");
+    if (!control_out.halted) $fatal(1, "invalid warp instruction did not halt the warp");
 
     reset = 1'b1;
     start_address = 16'd23;
@@ -76,20 +75,17 @@ module warp_control_unit_tb;
     reset = 1'b0;
     tick;
     #1;
-    if (dut.cmp_equal_flag !== 1'b0)
-      $fatal(1, "equality flag changed before CMP executed");
+    if (dut.cmp_equal_flag !== 1'b0) $fatal(1, "equality flag changed before CMP executed");
     lane_status.operands_equal = 1'b1;
     tick;
     #1;
-    if (dut.cmp_equal_flag !== 1'b1)
-      $fatal(1, "uniform CMP did not set the warp equality flag");
+    if (dut.cmp_equal_flag !== 1'b1) $fatal(1, "uniform CMP did not set the warp equality flag");
 
     mem_read_data = {`OP_JZ, 11'd100};
     tick;
     tick;
     #1;
-    if (control_out.instruction_address !== 16'd100)
-      $fatal(1, "JZ did not redirect the warp PC");
+    if (control_out.instruction_address !== 16'd100) $fatal(1, "JZ did not redirect the warp PC");
 
     // JLT branches once the warp's less-than flag is set.
     reset = 1'b1;
@@ -105,15 +101,13 @@ module warp_control_unit_tb;
     lane_status.less_than = 1'b1;
     tick;
     #1;
-    if (dut.cmp_less_flag !== 1'b1)
-      $fatal(1, "uniform CMP did not set the warp less-than flag");
+    if (dut.cmp_less_flag !== 1'b1) $fatal(1, "uniform CMP did not set the warp less-than flag");
 
     mem_read_data = {`OP_JLT, 11'd100};
     tick;
     tick;
     #1;
-    if (control_out.instruction_address !== 16'd100)
-      $fatal(1, "JLT did not redirect the warp PC");
+    if (control_out.instruction_address !== 16'd100) $fatal(1, "JLT did not redirect the warp PC");
 
     reset = 1'b1;
     mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};
@@ -125,8 +119,7 @@ module warp_control_unit_tb;
     lane_status.diverged = 1'b1;
     tick;
     #1;
-    if (!control_out.halted)
-      $fatal(1, "divergent CMP did not halt the warp");
+    if (!control_out.halted) $fatal(1, "divergent CMP did not halt the warp");
 
     $display("warp_control_unit_tb passed");
     $finish;

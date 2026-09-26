@@ -1,6 +1,6 @@
 # From Gates to GEMM
 
-From Gates to GEMM builds a small 16-bit computer in SystemVerilog, from logic gates and arithmetic circuits to a scalar CPU, an 8-lane SIMD unit, and a simple SIMT GPU. Assembly programs explore how dot products and matrix multiplication map onto each execution model. The goal is to make the path from basic digital logic to the parallel computation underlying modern neural networks understandable, with hardware and programs small enough to follow end to end.
+From Gates to GEMM builds a small 16-bit computer in SystemVerilog, from logic gates and arithmetic circuits to a scalar CPU, an 8-lane SIMD unit, and a simple SIMT GPU. Assembly programs explore how dot products and matrix multiplication map onto each execution model. The goal is to demystify the path from basic digital logic to the parallel computation underlying modern neural networks, with hardware and programs small enough to follow end to end.
 
 ## Repository layout
 

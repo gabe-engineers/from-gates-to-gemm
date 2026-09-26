@@ -2,11 +2,11 @@
 module subtracter_tb;
   logic [15:0] a;
   logic [15:0] b;
-  wire [15:0] out;
+  wire  [15:0] out;
 
   subtracter_16bit dut (
-      .a(a),
-      .b(b),
+      .a  (a),
+      .b  (b),
       .out(out)
   );
 

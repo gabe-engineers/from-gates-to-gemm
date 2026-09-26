@@ -41,10 +41,10 @@ module warp_control_unit (
   always @(posedge clk) begin
     if (reset) begin
       cmp_equal_flag <= 1'b0;
-      cmp_less_flag <= 1'b0;
+      cmp_less_flag  <= 1'b0;
     end else if (enable && fsm_out_state == `FSM_EXECUTE && is_cmp && !branch_diverged) begin
       cmp_equal_flag <= lane_status.operands_equal;
-      cmp_less_flag <= lane_status.less_than;
+      cmp_less_flag  <= lane_status.less_than;
     end
   end
 
@@ -53,12 +53,15 @@ module warp_control_unit (
   assign out.warp_request.alu_op = decoder_out.opcode[3:0];
   assign out.warp_request.writeback_source =
       is_load ? control_helpers_pkg::WB_MEMORY :
-      control_helpers_pkg::writeback_source_for_opcode(decoder_out.opcode);
+      control_helpers_pkg::writeback_source_for_opcode(
+      decoder_out.opcode
+  );
 
   assign out.warp_request.write_enable =
       (enable && decoder_out.valid && fsm_out_state == `FSM_EXECUTE &&
-       control_helpers_pkg::is_execute_register_write_op(decoder_out.opcode)) ||
-      (enable && mem_phase && is_load);
+       control_helpers_pkg::is_execute_register_write_op(
+      decoder_out.opcode
+  )) || (enable && mem_phase && is_load);
 
   assign out.mem_access = mem_phase && (is_load || is_store);
   assign out.mem_write_enable = mem_phase && is_store;
@@ -83,14 +86,14 @@ module warp_control_unit (
   );
 
   control_fsm fsm (
-      .clk            (clk),
-      .reset          (reset),
-      .enable         (enable),
-      .opcode         (decoder_out.opcode),
+      .clk              (clk),
+      .reset            (reset),
+      .enable           (enable),
+      .opcode           (decoder_out.opcode),
       .instruction_valid(decoder_out.valid && !branch_diverged),
-      .memory_complete(1'b1),
-      .gpu_busy       (1'b0),
-      .state          (fsm_out_state)
+      .memory_complete  (1'b1),
+      .gpu_busy         (1'b0),
+      .state            (fsm_out_state)
   );
 
   assign out.halted = fsm_out_state == `FSM_HALT;

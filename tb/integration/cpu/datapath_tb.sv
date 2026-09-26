@@ -1,8 +1,8 @@
 `include "tb_regs.svh"
 
 module datapath_16bit_tb;
-  logic clk;
-  logic reset;
+  logic                                clk;
+  logic                                reset;
 
   cpu_types_pkg::scalar_request_t      scalar_request;
   cpu_types_pkg::scalar_response_t     scalar_response;
@@ -15,13 +15,13 @@ module datapath_16bit_tb;
   localparam logic [1:0] WRITEBACK_SOURCE_THREAD_ID = control_helpers_pkg::WB_THREAD_ID;
 
   datapath_16bit dut (
-      .clk               (clk),
-      .reset             (reset),
-      .scalar_request    (scalar_request),
-      .scalar_response   (scalar_response),
-      .vector_mem_request(vector_mem_request),
+      .clk                (clk),
+      .reset              (reset),
+      .scalar_request     (scalar_request),
+      .scalar_response    (scalar_response),
+      .vector_mem_request (vector_mem_request),
       .vector_mem_response(vector_mem_response),
-      .vector_alu_request(vector_alu_request)
+      .vector_alu_request (vector_alu_request)
   );
 
   task test_case(input [15:0] test_number, input tc_reset, input tc_write_enable,
@@ -30,16 +30,16 @@ module datapath_16bit_tb;
                  input [15:0] expected_write_reg_data);
     begin
 
-      reset                          = tc_reset;
-      scalar_request.write_enable    = tc_write_enable;
+      reset                           = tc_reset;
+      scalar_request.write_enable     = tc_write_enable;
       scalar_request.writeback_source = tc_writeback_source;
-      scalar_request.alu_op          = tc_alu_op;
-      scalar_request.immediate       = tc_immediate;
-      scalar_request.read_addr_a     = tc_read_addr_a;
-      scalar_request.read_addr_b     = tc_read_addr_b;
-      scalar_request.write_addr      = tc_write_addr;
+      scalar_request.alu_op           = tc_alu_op;
+      scalar_request.immediate        = tc_immediate;
+      scalar_request.read_addr_a      = tc_read_addr_a;
+      scalar_request.read_addr_b      = tc_read_addr_b;
+      scalar_request.write_addr       = tc_write_addr;
 
-      clk = 0;
+      clk                             = 0;
       #10;
       clk = 1;
       #10;

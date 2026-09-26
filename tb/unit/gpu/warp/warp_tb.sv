@@ -8,7 +8,7 @@ module warp_tb;
   logic enable;
   wire gpu_types::warp_mem_response_t mem_response;
   wire [7:0][15:0] mem_read_data;
-  logic [15:0] instruction_memory [0:511];
+  logic [15:0] instruction_memory[0:511];
   wire halted;
   wire gpu_types::warp_mem_request_t warp_mem_request;
 
@@ -43,10 +43,9 @@ module warp_tb;
     start = 1'b0;
     start_address = 16'd23;
     enable = 1'b0;
-    for (int index = 0; index < 512; index++)
-      instruction_memory[index] = {`OP_HALT, 11'd0};
-    instruction_memory[23] = {`OP_TID, `REG_4, 8'd0};
-    instruction_memory[24] = {`OP_HALT, 11'd0};
+    for (int index = 0; index < 512; index++) instruction_memory[index] = {`OP_HALT, 11'd0};
+    instruction_memory[23]  = {`OP_TID, `REG_4, 8'd0};
+    instruction_memory[24]  = {`OP_HALT, 11'd0};
     instruction_memory[100] = {`OP_TID, `REG_5, 8'd0};
     tick;
 
@@ -54,8 +53,7 @@ module warp_tb;
     tick;
     if (dut.control_unit_module.fsm_out_state !== `FSM_FETCH_DECODE)
       $fatal(1, "disabled warp advanced before start");
-    if (halted)
-      $fatal(1, "disabled warp unexpectedly halted");
+    if (halted) $fatal(1, "disabled warp unexpectedly halted");
     if (warp_mem_request.write_enable || warp_mem_request.address[0] !== 16'd0)
       $fatal(1, "disabled warp issued an unexpected memory request");
 
@@ -78,15 +76,13 @@ module warp_tb;
     // HALT completes the warp. A subsequent start clears halted state.
     tick;
     tick;
-    if (!halted)
-      $fatal(1, "warp did not halt on HALT");
+    if (!halted) $fatal(1, "warp did not halt on HALT");
 
     start_address = 16'd100;
     start = 1'b1;
     tick;
     start = 1'b0;
-    if (halted)
-      $fatal(1, "start did not clear the completed warp state");
+    if (halted) $fatal(1, "start did not clear the completed warp state");
     if (warp_mem_request.address[0] !== 16'd100)
       $fatal(1, "restart did not install a new instruction address");
 

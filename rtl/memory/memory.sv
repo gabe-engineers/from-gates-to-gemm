@@ -6,16 +6,16 @@
 localparam int MEMORY_WORDS = 4096;
 
 module memory (
-    input                                            clk,
-    input  cpu_types_pkg::cpu_mem_request_t           cpu_mem_request,
-    input  gpu_types::warp_mem_request_t                 gpu_mem_request,
+    input                                          clk,
+    input  cpu_types_pkg::cpu_mem_request_t        cpu_mem_request,
+    input  gpu_types::warp_mem_request_t           gpu_mem_request,
     // Program load port: one word per clock while the CPU and GPU are held in
     // reset. It has priority over both run-time write ports.
-    input                                            load_enable,
-    input                                     [15:0] load_address,
-    input                                     [15:0] load_data,
-    output                                    [15:0] cpu_read_data,
-    output gpu_types::warp_mem_response_t            gpu_read_response
+    input                                          load_enable,
+    input                                   [15:0] load_address,
+    input                                   [15:0] load_data,
+    output                                  [15:0] cpu_read_data,
+    output gpu_types::warp_mem_response_t          gpu_read_response
 );
   logic [15:0] ram[0:MEMORY_WORDS-1];
   wire [7:0][15:0] gpu_read_words;
@@ -45,8 +45,7 @@ module memory (
       ram[gpu_mem_request.address[6]] <= gpu_mem_request.write_data[6];
       ram[gpu_mem_request.address[7]] <= gpu_mem_request.write_data[7];
     end
-    if (cpu_mem_request.write_enable)
-      ram[cpu_mem_request.address] <= cpu_mem_request.write_data;
+    if (cpu_mem_request.write_enable) ram[cpu_mem_request.address] <= cpu_mem_request.write_data;
     if (load_enable) ram[load_address] <= load_data;
   end
 

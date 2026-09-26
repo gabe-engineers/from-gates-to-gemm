@@ -6,30 +6,30 @@
 // selected lane per memory phase; vector ALU instructions write every lane of a
 // selected result register in their execute phase.
 module vector_register_file (
-    input         clk,
-    input         reset,
-    input         write_enable,
-    input  [ 2:0] write_addr,
-    input  [ 2:0] write_lane,
-    input  [15:0] write_data,
-    input  [ 2:0] read_addr,
-    input  [ 2:0] read_lane,
-    output [15:0] read_data,
-    input         vector_alu_write_enable,
-    input  [ 2:0] vector_alu_write_addr,
+    input          clk,
+    input          reset,
+    input          write_enable,
+    input  [  2:0] write_addr,
+    input  [  2:0] write_lane,
+    input  [ 15:0] write_data,
+    input  [  2:0] read_addr,
+    input  [  2:0] read_lane,
+    output [ 15:0] read_data,
+    input          vector_alu_write_enable,
+    input  [  2:0] vector_alu_write_addr,
     input  [127:0] vector_alu_write_data,
-    input  [ 2:0] vector_alu_read_addr_a,
-    input  [ 2:0] vector_alu_read_addr_b,
+    input  [  2:0] vector_alu_read_addr_a,
+    input  [  2:0] vector_alu_read_addr_b,
     output [127:0] vector_alu_read_data_a,
     output [127:0] vector_alu_read_data_b
 );
   wire [5:0] write_index;
   wire [5:0] read_index;
-  wire [15:0] lane_data [0:63];
+  wire [15:0] lane_data[0:63];
 
   assign write_index = {write_addr, write_lane};
-  assign read_index = {read_addr, read_lane};
-  assign read_data = lane_data[read_index];
+  assign read_index  = {read_addr, read_lane};
+  assign read_data   = lane_data[read_index];
 
   genvar lane;
   generate
@@ -39,8 +39,7 @@ module vector_register_file (
       wire [15:0] lane_write_data;
 
       assign lane_memory_write_enable = write_enable && write_index == lane;
-      assign lane_alu_write_enable =
-          vector_alu_write_enable && vector_alu_write_addr == lane / 8;
+      assign lane_alu_write_enable = vector_alu_write_enable && vector_alu_write_addr == lane / 8;
       assign lane_write_data = lane_alu_write_enable ?
           vector_alu_write_data[(lane % 8) * 16 +: 16] : write_data;
 

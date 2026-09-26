@@ -4,7 +4,7 @@ module gpu_tb;
   logic clk;
   logic reset;
   wire gpu_types::warp_mem_response_t mem_response;
-  logic [15:0] instruction_memory [0:511];
+  logic [15:0] instruction_memory[0:511];
   gpu_types::gpu_dispatch_t gpu_dispatch;
   wire gpu_types::gpu_state_t gpu_state;
   wire gpu_types::gpu_mem_request_t gpu_mem_request;
@@ -39,10 +39,9 @@ module gpu_tb;
     reset = 1'b1;
     gpu_dispatch.command = gpu_types::GPU_COMMAND_NONE;
     gpu_dispatch.launch_address = 16'd23;
-    for (int index = 0; index < 512; index++)
-      instruction_memory[index] = {`OP_HALT, 11'd0};
-    instruction_memory[23] = {`OP_LDI, `REG_1, 8'd1};
-    instruction_memory[24] = {`OP_HALT, 11'd0};
+    for (int index = 0; index < 512; index++) instruction_memory[index] = {`OP_HALT, 11'd0};
+    instruction_memory[23]  = {`OP_LDI, `REG_1, 8'd1};
+    instruction_memory[24]  = {`OP_HALT, 11'd0};
     instruction_memory[100] = {`OP_LDI, `REG_1, 8'd2};
     instruction_memory[101] = {`OP_HALT, 11'd0};
     tick;
@@ -51,8 +50,7 @@ module gpu_tb;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_IDLE)
       $fatal(1, "GPU left IDLE without a launch command");
-    if (gpu_mem_request.write_enable !== 1'b0)
-      $fatal(1, "idle GPU issued a memory write request");
+    if (gpu_mem_request.write_enable !== 1'b0) $fatal(1, "idle GPU issued a memory write request");
     if (dut.warp_module.control_unit_module.fsm_out_state !== `FSM_FETCH_DECODE)
       $fatal(1, "disabled warp advanced while GPU was idle");
 
@@ -61,16 +59,18 @@ module gpu_tb;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "launch did not transition GPU from IDLE to RUNNING");
     if (gpu_mem_request.address[0] !== 16'd23)
-      $fatal(1, "launch did not start fetching from its supplied address: got %0d",
-             gpu_mem_request.address[0]);
+      $fatal(
+          1,
+          "launch did not start fetching from its supplied address: got %0d",
+          gpu_mem_request.address[0]
+      );
 
     // A second launch while work is active is a no-op.
     gpu_dispatch.launch_address = 16'd100;
     tick;
     if (gpu_state !== gpu_types::GPU_STATE_RUNNING)
       $fatal(1, "launch while running changed the GPU state");
-    if (gpu_mem_request.address[0] !== 16'd23)
-      $fatal(1, "launch while running restarted the warp");
+    if (gpu_mem_request.address[0] !== 16'd23) $fatal(1, "launch while running restarted the warp");
 
     gpu_dispatch.command = gpu_types::GPU_COMMAND_NONE;
     tick;

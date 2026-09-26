@@ -1,22 +1,22 @@
 
 module alu_16bit_tb;
-  logic  [ 3:0] op;
-  logic  [15:0] a;
-  logic  [15:0] b;
-  wire [15:0] out;
+  logic [ 3:0] op;
+  logic [15:0] a;
+  logic [15:0] b;
+  wire  [15:0] out;
   alu_16bit dut (
-    op,
-    a,
-    b,
-    out
+      op,
+      a,
+      b,
+      out
   );
 
   task test_case(input [3:0] tc_op, input [15:0] tc_a, input [15:0] tc_b,
                  input [15:0] expected_out);
     begin
       op = tc_op;
-      a = tc_a;
-      b = tc_b;
+      a  = tc_a;
+      b  = tc_b;
       #1;
       if (out !== expected_out) begin
         $fatal(1, "ALU op=%h, a=%h, b=%h: got %h, expected %h", tc_op, tc_a, tc_b, out,

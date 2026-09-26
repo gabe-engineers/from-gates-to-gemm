@@ -6,12 +6,12 @@ module warp_memory_tb;
   logic start;
   logic [15:0] start_address;
   logic enable;
-  logic [15:0] memory [0:511];
+  logic [15:0] memory[0:511];
   wire [7:0][15:0] mem_read_data;
   wire gpu_types::gpu_mem_response_t mem_response;
   wire halted;
   wire gpu_types::warp_mem_request_t warp_mem_request;
-  wire [15:0] lane_result [0:7];
+  wire [15:0] lane_result[0:7];
 
   for (genvar lane = 0; lane < 8; lane++) begin : read_ports
     assign mem_read_data[lane] = memory[warp_mem_request.address[lane]];
@@ -67,19 +67,17 @@ module warp_memory_tb;
     tick;
     start = 1'b1;
     tick;
-    start = 1'b0;
+    start  = 1'b0;
     enable = 1'b1;
 
     for (int cycle = 0; cycle < 40 && !halted; cycle++) tick;
     #1;
 
-    if (!halted)
-      $fatal(1, "warp did not halt");
-    if (memory[5] !== 16'h002A)
-      $fatal(1, "STORE did not write memory[5]: got %h", memory[5]);
+    if (!halted) $fatal(1, "warp did not halt");
+    if (memory[5] !== 16'h002A) $fatal(1, "STORE did not write memory[5]: got %h", memory[5]);
     for (int lane = 0; lane < 8; lane++)
-      if (lane_result[lane] !== 16'h002A)
-        $fatal(1, "lane %0d LOAD produced %h", lane, lane_result[lane]);
+    if (lane_result[lane] !== 16'h002A)
+      $fatal(1, "lane %0d LOAD produced %h", lane, lane_result[lane]);
 
     $display("warp_memory_tb passed");
     $finish;
