@@ -76,6 +76,10 @@ module warp_decoder_tb;
                  .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
                  .immediate(16'd0), .address(16'h0123));
 
+    expect_valid(.instruction({`OP_JLT, 11'h123}), .opcode(`OP_JLT),
+                 .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
+                 .immediate(16'd0), .address(16'h0123));
+
     expect_valid(.instruction({`OP_HALT, 11'd0}), .opcode(`OP_HALT),
                  .dst_reg(3'd0), .src_reg_a(3'd0), .src_reg_b(3'd0),
                  .immediate(16'd0), .address(16'd0));

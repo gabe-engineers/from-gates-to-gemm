@@ -42,6 +42,7 @@ package gpu_types;
   typedef struct packed {
     logic [15:0] value;
     logic        operands_equal;
+    logic        operands_less_than;
     logic [15:0] mem_address;
     logic [15:0] mem_write_data;
   } warp_lane_response_t;
@@ -61,6 +62,7 @@ package gpu_types;
 
   typedef struct packed {
     logic operands_equal;
+    logic less_than;
     logic diverged;
   } warp_lane_status_t;
 

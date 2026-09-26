@@ -15,6 +15,7 @@ module warp_lane (
   wire [15:0] read_reg_data_b;
   wire [15:0] dst_reg_data;
   wire [15:0] writeback_data;
+  wire less_than_flag;
 
   assign writeback_data =
       warp_request.writeback_source == control_helpers_pkg::WB_MEMORY ?
@@ -25,6 +26,7 @@ module warp_lane (
           {13'b0, lane_id} : alu_out;
   assign response.value = writeback_data;
   assign response.operands_equal = read_reg_data_a == read_reg_data_b;
+  assign response.operands_less_than = less_than_flag;
   assign response.mem_address = read_reg_data_b;
   assign response.mem_write_data = read_reg_data_a;
 
@@ -45,7 +47,9 @@ module warp_lane (
       .operation(warp_request.alu_op),
       .operand_a(read_reg_data_a),
       .operand_b(read_reg_data_b),
-      .result(alu_out)
+      .result(alu_out),
+      .zero_flag(),
+      .less_than_flag(less_than_flag)
   );
 
 endmodule

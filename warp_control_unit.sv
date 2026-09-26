@@ -18,15 +18,17 @@ module warp_control_unit (
   wire [15:0] ir;
   logic [15:0] pc;
   logic cmp_equal_flag;
+  logic cmp_less_flag;
 
   wire is_cmp = decoder_out.opcode == `OP_CMP;
   wire is_jmp = decoder_out.opcode == `OP_JMP;
   wire is_jz = decoder_out.opcode == `OP_JZ;
+  wire is_jlt = decoder_out.opcode == `OP_JLT;
   wire is_load = decoder_out.opcode == `OP_LOAD;
   wire is_store = decoder_out.opcode == `OP_STORE;
 
   wire branch_diverged = is_cmp && lane_status.diverged;
-  wire branch_taken = is_jmp || (is_jz && cmp_equal_flag);
+  wire branch_taken = is_jmp || (is_jz && cmp_equal_flag) || (is_jlt && cmp_less_flag);
   wire mem_phase = fsm_out_state == `FSM_MEMORY;
 
   always @(posedge clk) begin
@@ -38,9 +40,13 @@ module warp_control_unit (
   end
 
   always @(posedge clk) begin
-    if (reset) cmp_equal_flag <= 1'b0;
-    else if (enable && fsm_out_state == `FSM_EXECUTE && is_cmp && !branch_diverged)
+    if (reset) begin
+      cmp_equal_flag <= 1'b0;
+      cmp_less_flag <= 1'b0;
+    end else if (enable && fsm_out_state == `FSM_EXECUTE && is_cmp && !branch_diverged) begin
       cmp_equal_flag <= lane_status.operands_equal;
+      cmp_less_flag <= lane_status.less_than;
+    end
   end
 
   assign out.instruction_address = pc;

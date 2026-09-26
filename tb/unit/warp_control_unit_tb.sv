@@ -94,6 +94,30 @@ module warp_control_unit_tb;
     if (control_out.instruction_address !== 16'd100)
       $fatal(1, "JZ did not redirect the warp PC");
 
+    // JLT branches once the warp's less-than flag is set.
+    reset = 1'b1;
+    start_address = 16'd23;
+    mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};
+    lane_status.operands_equal = 1'b0;
+    lane_status.less_than = 1'b1;
+    lane_status.diverged = 1'b0;
+    tick;
+    reset = 1'b0;
+    tick;
+    #1;
+    lane_status.less_than = 1'b1;
+    tick;
+    #1;
+    if (dut.cmp_less_flag !== 1'b1)
+      $fatal(1, "uniform CMP did not set the warp less-than flag");
+
+    mem_read_data = {`OP_JLT, 11'd100};
+    tick;
+    tick;
+    #1;
+    if (control_out.instruction_address !== 16'd100)
+      $fatal(1, "JLT did not redirect the warp PC");
+
     reset = 1'b1;
     mem_read_data = {`OP_CMP, `REG_2, `REG_3, 5'd0};
     lane_status.diverged = 1'b1;

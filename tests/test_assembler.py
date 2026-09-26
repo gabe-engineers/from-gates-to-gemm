@@ -68,7 +68,7 @@ def decoder_fields(word: int) -> tuple[int, int, int, int, int, int]:
         dst = (word >> 8) & 7
     elif opcode == 0x1B:
         src_a = (word >> 8) & 7
-    elif opcode in (0x0D, 0x0E, 0x18, 0x19):
+    elif opcode in (0x0D, 0x0E, 0x18, 0x19, 0x1A):
         address = word & 0x7FF
     return opcode, dst, src_a, src_b, immediate, address
 

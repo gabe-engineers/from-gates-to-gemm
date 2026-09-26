@@ -134,15 +134,15 @@ zero-extended `addr11` operand. This makes the wait skip over an inline GPU
 kernel, so a program can lay out the CPU and warp code in one image.
 
 Warp code uses a scalar/SIMT subset: `LDI`, `LUI`, `MOV`, scalar arithmetic,
-`LOAD`, `STORE`, `CMP`, `JMP`, `JZ`, `TID`, and `HALT` (`JLT` and `JR` are CPU-only).
+`LOAD`, `STORE`, `CMP`, `JMP`, `JZ`, `JLT`, `TID`, and `HALT` (`JR` is CPU-only).
 Each supported
 instruction is broadcast across the warp's lanes. `CMP` reconciles every lane's
-equality into one warp flag; if the lanes disagree the warp halts, because
-divergent warps are not supported. CPU SIMD and GPU-coordination opcodes are
-invalid in a warp and halt it.
+equality and less-than results into warp flags; if the lanes disagree on either
+result, the warp halts, because divergent warps are not supported. CPU SIMD and
+GPU-coordination opcodes are invalid in a warp and halt it.
 
 Arithmetic, multiplication, and `VDOT` retain the low 16 bits. Logical shifts
-by 16 or more produce zero. Only `CMP` changes the equality flag.
+by 16 or more produce zero. Only `CMP` changes the comparison flags.
 
 Use `LUI` together with `LDI` and a logical operation such as `OR` to construct
 16-bit constants from two 8-bit immediate values.

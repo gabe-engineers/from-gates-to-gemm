@@ -42,6 +42,10 @@ test-dotproduct-simt:
 test-gemm:
     just run-program gemm_scalar.asm +DATA=gemm_scalar.data +RESULT=116
 
+# Assemble and run the checked-in SIMT GEMM program (C is at 116..131).
+test-gemm-simt:
+    just run-program gemm_simt.asm +DATA=gemm_scalar.data +RESULT=116
+
 synth-check:
     sh scripts/synth_check.sh
 
