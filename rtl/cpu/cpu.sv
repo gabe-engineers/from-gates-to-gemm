@@ -1,7 +1,5 @@
 `include "fsm_states.svh"
 `include "cpu_types.svh"
-`include "control_unit.sv"
-`include "datapath.sv"
 `include "control_helpers.svh"
 `include "gpu_types.svh"
 

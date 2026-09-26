@@ -1,5 +1,7 @@
 sim_dir := "build/sim"
-include_dirs := "-Irtl/include -Irtl/lib -Irtl/cpu -Irtl/memory -Irtl/top -Itb/include"
+asm_dir := "build/asm"
+rtl_filelist := "rtl/filelists/chip.f"
+include_dirs := "-Irtl/include -Itb/include"
 
 default: test-all
 
@@ -9,45 +11,43 @@ test target *args:
     #!/usr/bin/env sh
     set -eu
     mkdir -p {{sim_dir}}
-    if [ -f tb/integration/{{target}}.sv ]; then
-      testbench=tb/integration/{{target}}.sv
-    elif [ -f tb/unit/{{target}}.sv ]; then
-      testbench=tb/unit/{{target}}.sv
-    else
+    testbench=$(find tb/unit tb/integration -type f -name "{{target}}.sv" -print -quit)
+    if [ -z "$testbench" ]; then
       printf '%s\n' "Unknown testbench: {{target}}" >&2
       exit 1
     fi
-    iverilog -g2012 {{include_dirs}} -o {{sim_dir}}/{{target}} "$testbench"
+    iverilog -g2012 {{include_dirs}} -f {{rtl_filelist}} -o {{sim_dir}}/{{target}} "$testbench"
     vvp {{sim_dir}}/{{target}} {{args}}
 
-# Assemble an arbitrary source program and run it in the generic CPU harness.
+# Assemble an arbitrary source program and run it in the generic chip harness.
 # Extra arguments are passed to vvp, e.g.:
 #   just run-program foo.asm +DATA=foo.data +RESULT=511
 run-program source *args:
-    python3 assembler.py "{{source}}"
-    just test program_tb {{args}}
+    mkdir -p {{asm_dir}}
+    python3 tools/assembler.py "{{source}}" --output {{asm_dir}}/program.hex
+    just test program_tb +PROGRAM={{asm_dir}}/program.hex {{args}}
 
 # Assemble and run the checked-in scalar N-size dot-product program.
 test-dotproduct:
-    just run-program dot_product_scalar.asm +DATA=dot_product_scalar.data +RESULT=511
+    just run-program programs/dot-product/scalar.asm +DATA=programs/dot-product/scalar.data +RESULT=511
 
 # Assemble and run the checked-in SIMD dot-product program.
 test-dotproduct-simd:
-    just run-program dot_product_simd.asm +DATA=dot_product_simd.data +RESULT=511
+    just run-program programs/dot-product/simd.asm +DATA=programs/dot-product/simd.data +RESULT=511
 # Assemble and run the checked-in SIMT GPU dot-product program.
 test-dotproduct-simt:
-    just run-program dot_product_simt.asm +DATA=dot_product_simt.data +RESULT=511
+    just run-program programs/dot-product/simt.asm +DATA=programs/dot-product/simt.data +RESULT=511
 
 # Assemble and run the checked-in scalar GEMM program (C is at 116..131).
 test-gemm:
-    just run-program gemm_scalar.asm +DATA=gemm_scalar.data +RESULT=116
+    just run-program programs/gemm/scalar.asm +DATA=programs/gemm/input.data +RESULT=116
 
 # Assemble and run the checked-in SIMT GEMM program (C is at 116..131).
 test-gemm-simt:
-    just run-program gemm_simt.asm +DATA=gemm_scalar.data +RESULT=116
+    just run-program programs/gemm/simt.asm +DATA=programs/gemm/input.data +RESULT=116
 
 synth-check:
-    sh scripts/synth_check.sh
+    sh scripts/synth/synth_check.sh
 
 test-all:
     just synth-check
@@ -79,7 +79,7 @@ test-all:
     just test register_tb
 
 test-assembler:
-    python3 -m unittest discover -s tests -p 'test_*.py' -v
+    python3 -m unittest discover -s tests -t . -p 'test_*.py' -v
 
 clean:
     rm -rf build

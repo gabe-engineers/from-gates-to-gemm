@@ -1,7 +1,4 @@
-`include "cpu.sv"
 `include "cpu_types.svh"
-`include "gpu.sv"
-`include "memory.sv"
 `include "gpu_types.svh"
 
 module chip (

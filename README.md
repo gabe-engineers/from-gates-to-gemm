@@ -1,6 +1,21 @@
 # From Gates to GEMM
 
-This project implements a multi-cycle 16-bit scalar and SIMD processor in Verilog.
+From Gates to GEMM builds a small 16-bit computer in SystemVerilog, from logic gates and arithmetic circuits to a scalar CPU, an 8-lane SIMD unit, and a simple SIMT GPU. Assembly programs explore how dot products and matrix multiplication map onto each execution model. The goal is to make the path from basic digital logic to the parallel computation underlying modern neural networks understandable, with hardware and programs small enough to follow end to end.
+
+## Repository layout
+
+- `rtl/common/` contains reusable primitives, scalar blocks, and control logic.
+- `rtl/cpu/`, `rtl/gpu/`, and `rtl/memory/` contain the major hardware blocks; the
+  GPU owns its implementation at `rtl/gpu/warp/`.
+- `rtl/top/` contains the chip integration point, and `rtl/filelists/chip.f`
+  defines the design compilation order.
+- `tb/` mirrors the RTL hierarchy for unit tests and separates CPU and system
+  integration tests.
+- `programs/` groups each workload's assembly and input data; `tools/` holds
+  host-side tools such as the assembler.
+
+Design `.sv` files are compiled through the file list rather than included by
+other design files. Only `.svh` headers are included.
 
 ## Machine organization
 
@@ -33,8 +48,8 @@ Simulation output is written beneath `build/sim/`.
 
 ### RTL hardware gate
 
-`just synth-check` checks only the design sources (`rtl/` and top-level HDL),
-never `tb/`. It first rejects common simulation-only constructs such as queues,
+`just synth-check` checks only the design sources under `rtl/`, never `tb/`.
+It first rejects common simulation-only constructs such as queues,
 dynamic arrays, array locator methods, randomization, delays, and testbench
 system tasks. It then runs Yosys on the `chip` top level and writes its log to
 `build/synth/chip.log`.
@@ -64,11 +79,11 @@ just run-program foo.asm +DATA=foo.data +RESULT=511
 For the checked-in dot-product samples, use `just test-dotproduct`,
 `just test-dotproduct-simd`, or `just test-dotproduct-simt`.
 
-That command assembles the source into `program.hex` in the repository root,
-then runs `program_tb`. To run an already-assembled image, use:
+That command assembles the source into `build/asm/program.hex`, then runs
+`program_tb`. To run an already-assembled image, use:
 
 ```sh
-just test program_tb
+just test program_tb +PROGRAM=path/to/program.hex
 ```
 
 `program_tb` accepts optional VVP plusargs when invoking the simulator
