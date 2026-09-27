@@ -65,3 +65,10 @@ registers (`v1`–`v8`), each with eight 16-bit lanes.
 - Workload evidence comes from RTL simulation. `just synth-check` performs a
   generic synthesis check, not an FPGA build, target-specific timing result, or
   hardware execution.
+
+## Inspiration
+
+This project was inspired by George Hotz's
+[From the Transistor to the Web Browser](https://github.com/geohot/fromthetransistor),
+a first-principles course outline. It follows a narrower path from digital logic
+to scalar, SIMD, and SIMT matrix multiplication.
