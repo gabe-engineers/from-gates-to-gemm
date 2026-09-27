@@ -38,9 +38,9 @@ test-dotproduct-simd:
 test-dotproduct-simt:
     just run-program programs/dot-product/simt.asm +DATA=programs/dot-product/simt.data +RESULT=511
 
-# Assemble and run the checked-in scalar GEMM program (C is at 116..131).
+# Assemble and reference-check all checked-in scalar, SIMD, and SIMT GEMM programs.
 test-gemm:
-    just run-program programs/gemm/scalar.asm +DATA=programs/gemm/input.data +RESULT=116
+    python3 -m unittest tests.programs.test_gemm -v
 
 # Assemble and run the checked-in SIMD GEMM program (C is at 116..131).
 test-gemm-simd:
