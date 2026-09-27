@@ -19,49 +19,7 @@ other design files. Only `.svh` headers are included.
 
 ## Chip architecture
 
-```mermaid
-flowchart TB
-  subgraph chip["chip.sv"]
-    direction TB
-
-    subgraph cpu["cpu.sv"]
-      direction TB
-      ctrl["control_unit<br/>decoder · PC · control FSM"]
-      datapath["datapath_16bit"]
-      rfile["scalar register file<br/>r1–r8 · 16-bit"]
-      alu["alu_16bit"]
-      vrfile["vector register file<br/>v1–v8 · 8 × 16-bit"]
-      valu["vector_alu_16bit<br/>VADD · VSUB · VMUL · VDOT"]
-      ctrl -- "control" --> datapath
-      datapath --> rfile
-      datapath --> alu
-      datapath --> vrfile
-      datapath --> valu
-    end
-
-    subgraph gpu["gpu.sv"]
-      direction TB
-      state["gpu state FSM<br/>IDLE / RUNNING"]
-      subgraph warp["warp.sv — 8 lanes"]
-        direction TB
-        wctrl["warp_control_unit"]
-        wdata["warp_datapath"]
-        lanes["lane 0 … lane 7"]
-        wctrl --> wdata --> lanes
-      end
-      state --> warp
-    end
-
-    mem["memory.sv<br/>4096 × 16-bit RAM"]
-  end
-
-  load["program load port<br/>load_enable / address / data"] --> mem
-  cpu -- "mem_request / read_data" --> mem
-  gpu -- "8-lane mem_request / read_data" --> mem
-  cpu -- "gpu_dispatch (GLAUNCH)" --> gpu
-  gpu -- "gpu_state (IDLE / RUNNING)" --> cpu
-  ctrl -- "halted" --> halted["halted"]
-```
+![Chip architecture](docs/chip-architecture.svg)
 
 ## Machine organization
 
