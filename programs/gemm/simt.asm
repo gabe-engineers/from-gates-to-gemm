@@ -7,6 +7,14 @@
 # Its only conditional GPU branch compares the uniform block offset with N.
 # The final partial block uses a branchless 0/1 mask, so all lanes keep
 # identical control flow even when N is not divisible by eight.
+#
+# The mask zeroes the product; it does not skip the loads. Every lane still
+# reads A[i*N + k] and B^T[j*N + k], so all addresses reached through
+# ceil(N/8)*8 - 1 must stay inside installed RAM. CMP/JLT are signed, so the
+# idiom assumes nonnegative indices below 2^15.
+#
+# Branch, call, and launch targets are assembled word indices (the instruction
+# count), not source line numbers; comments and blank lines do not count.
 
 # Memory Layout:
 # 0 - 99: instructions
@@ -21,7 +29,9 @@
 # 108 - 115: one GPU partial per lane. Before the first launch, mem[115]
 #             holds the C base pointer; later output pointers live in mem[107],
 #             so the kernel can reuse mem[115] as partial[7].
-# C must not overlap 108 - 115 (the shared test image uses C at 116).
+# C is written row-major over M*P words; it must not overlap live metadata
+# (100-107), the lane partials (108-115), A, or B^T. The shared test image
+# places C at 116.
 
 # CPU: nested C[i][j] loop. Each iteration saves its arguments, launches the
 # GPU kernel, waits at address 20, reduces partial[0..7], and stores C[i][j].
@@ -106,28 +116,26 @@ HALT
 # r7: mask / lane id at store
 # r8: mask-shift count, then the A address/value and masked product
 LDI r1 101
-LOAD r1 r1
+LOAD r1 r1 # r1 = N
 LDI r2 103
-LOAD r2 r2
+LOAD r2 r2 # r2 = A base
 LDI r3 104
-LOAD r3 r3
+LOAD r3 r3 # r3 = B^T base
 LDI r6 105
-LOAD r6 r6
+LOAD r6 r6 # r6 = i
 MUL r6 r6 r1
-ADD r2 r2 r6
+ADD r2 r2 r6 # A[i*N]
 LDI r6 106
-LOAD r6 r6
+LOAD r6 r6 # r6 = j
 MUL r6 r6 r1
-ADD r3 r3 r6
+ADD r3 r3 r6 # B^T[j*N]
 LDI r4 0
 LDI r5 0
 
-# gpu_loop_cmp = 67. r4 and r1 are uniform here, so this JLT is uniform.
 CMP r4 r1
 JLT 70
 JMP 85
 
-# gpu_loop_body = 70
 TID r6
 ADD r6 r6 r4
 SUB r7 r6 r1

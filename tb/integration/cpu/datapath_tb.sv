@@ -45,7 +45,7 @@ module datapath_16bit_tb;
       #10;
 
       if (scalar_response.write_reg_data !== expected_write_reg_data)
-        $display(
+        $fatal(1,
             "FAILED Test #%d - reset: %d, write_enable: %d, writeback_source: %d, alu_op: %d, immediate: %d, read_addr_a: %d, read_addr_b: %d, write_addr: %d | write_reg_data: %d, expected_write_reg_data: %d"
                 ,
             test_number,

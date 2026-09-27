@@ -3,7 +3,7 @@
 
 // Installed RAM size. Kept below 2^15 so the sign bit of an address difference
 // stays meaningful for range/mask comparisons.
-localparam int MEMORY_WORDS = 4096;
+localparam int MEMORY_WORDS = 1024;
 
 module memory (
     input                                          clk,

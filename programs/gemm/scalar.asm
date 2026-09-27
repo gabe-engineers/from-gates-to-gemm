@@ -3,6 +3,9 @@
 # B is stored transposed (B^T, P x N row-major), so C[i][j] = dot(A row i, B^T row j)
 # and both operands are walked with unit stride. This also lets a SIMD kernel use
 # VLD/VDOT, which require contiguous operands.
+#
+# Branch, call, and launch targets are assembled word indices (the instruction
+# count), not source line numbers; comments and blank lines do not count.
 
 # Memory Layout:
 # 0 - 99: instructions
@@ -15,7 +18,8 @@
 # 106: function argument j
 # 107: function argument output pointer
 # 114: return address
-# 115: output (C) base pointer; C occupies M*P words from there
+# 115: output (C) base pointer; C is written row-major over M*P words from there
+# C must not overlap live metadata, A, or B^T.
 
 # Register Layout Core Program:
 # r1: M (outer loop bound)

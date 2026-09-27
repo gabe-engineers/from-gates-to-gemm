@@ -4,20 +4,13 @@
 
 From Gates to GEMM builds a small 16-bit computer in SystemVerilog, from logic gates and arithmetic circuits to a scalar CPU, an 8-lane SIMD unit, and a simple SIMT GPU. Assembly programs explore how dot products and matrix multiplication map onto each execution model. The goal is to demystify the path from basic digital logic to the parallel computation underlying modern neural networks, with hardware and programs small enough to follow end to end.
 
-## Repository layout
+## Execution models at a glance
 
-- `rtl/common/` contains reusable primitives, scalar blocks, and control logic.
-- `rtl/cpu/`, `rtl/gpu/`, and `rtl/memory/` contain the major hardware blocks; the
-  GPU owns its implementation at `rtl/gpu/warp/`.
-- `rtl/top/` contains the chip integration point, and `rtl/filelists/chip.f`
-  defines the design compilation order.
-- `tb/` mirrors the RTL hierarchy for unit tests and separates CPU and system
-  integration tests.
-- `programs/` groups each workload's assembly and input data; `tools/` holds
-  host-side tools such as the assembler.
-
-Design `.sv` files are compiled through the file list rather than included by
-other design files. Only `.svh` headers are included.
+| Model | Execution | Constraint shown here |
+| --- | --- | --- |
+| Scalar | One 16-bit scalar instruction and ALU path. | Loops handle one element at a time. |
+| SIMD | One CPU vector instruction operates on eight 16-bit lanes; `VLD` and `VST` transfer one lane per memory cycle. | Vector chunks use a scalar tail when needed. |
+| SIMT | One instruction stream is broadcast to an eight-lane warp; each lane has its own scalar registers and `TID`. | Control flow must stay uniform; divergent comparisons halt the warp. |
 
 ## Chip architecture
 
@@ -31,23 +24,20 @@ other design files. Only `.svh` headers are included.
   16-bit lanes per register.
 - Memory is word-addressed.
 - The PC and register-held memory addresses are 16 bits.
-- The supplied RAM contains 4096 words. Access outside the installed RAM range is
+- The supplied RAM contains 1024 words. Access outside the installed RAM range is
   undefined behavior; architectural address width and physical RAM capacity are
   intentionally separate.
 
 ## Simulation
 
-Install Icarus Verilog, Yosys, and `just`, then run:
+Install Python 3.10+, Icarus Verilog, Yosys, and `just`, then run:
 
 ```sh
-just test cpu_tb       # Run one testbench.
-just test-assembler   # Run assembler and assembler/CPU tests.
-just test-dotproduct  # Assemble and run the scalar N-size dot product.
-just test-dotproduct-simd  # Assemble and run the SIMD dot-product sample.
-just test-dotproduct-simt  # Assemble and run the SIMT GPU dot-product sample.
-just synth-check      # Check RTL-only code and synthesize the chip top level.
-just test-all         # Run every testbench.
-just clean
+just test-all                              # Verify RTL, dot products, and scalar/SIMD/SIMT GEMM.
+just test-gemm                             # Assemble and run the checked-in scalar GEMM sample.
+just run-program path/to/program.asm       # Assemble and run an arbitrary program.
+just synth-check                           # Check RTL-only code and synthesize the chip top level.
+just clean                                 # Remove generated build artifacts.
 ```
 
 Simulation output is written beneath `build/sim/`.
@@ -109,7 +99,27 @@ The CPU uses a multi-cycle design:
    memory cycles, one per vector lane.
 
 `HALT` stops instruction execution without clearing registers. Reset clears the
-PC, scalar registers, vector registers, and equality flag and resumes fetching.
+PC, scalar registers, vector registers, and comparison flags and resumes
+fetching.
+
+### Memory and execution boundary
+
+RAM is one shared array of 1024 words. Reads are combinational: the addressed
+word appears in the same cycle, so there is no read latency and nothing to wait
+on. Writes commit on the clock edge. There is no ready/valid handshake, so a
+client must present an address on the exact cycle it needs the data, and assert
+`write_enable` only on the cycle it intends to write. When multiple writers act
+on the same edge, priority is program load, then CPU, then GPU; among GPU lanes
+the highest-numbered lane wins. A losing write is dropped with no signal.
+
+Reset is synchronous for the CPU, GPU, and scalar/vector registers, but it does
+not clear RAM. Words are zero only at power-up (simulation time zero or FPGA
+configuration), so a reload leaves previously used locations holding the old
+program's data. `GLAUNCH` does not merely start the warp: the warp is reset
+first, reloading the PC with the launch address and clearing every lane's
+registers.
+`GWAIT` stalls only the CPU until the warp halts; otherwise the CPU and GPU run
+concurrently against the same RAM.
 
 ## Instruction set
 
@@ -127,7 +137,7 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x09` | `MUL rd ra rb` | Multiply |
 | `0x0A` | `LOAD rd raddr` | Load one word |
 | `0x0B` | `STORE raddr rs` | Store one word; address operand comes first |
-| `0x0C` | `CMP ra rb` | Set the equality and less-than flags |
+| `0x0C` | `CMP ra rb` | Set the equality and signed less-than flags |
 | `0x0D` | `JMP addr11` | Absolute jump to a zero-extended 11-bit address |
 | `0x0E` | `JZ addr11` | Jump when the equality flag is set |
 | `0x0F` | `HALT` | Stop without clearing registers |
@@ -145,7 +155,8 @@ PC, scalar registers, vector registers, and equality flag and resumes fetching.
 | `0x1B` | `JR rd` | Jump to the address held in a scalar register |
 | `0x1C–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
 
-Unsupported opcodes stop the current CPU implementation without side effects.
+Unsupported opcodes stop the current CPU implementation with no register,
+memory, or GPU side effects; the PC has already advanced past the instruction.
 
 The GPU reports registered `IDLE`/`RUNNING` state to the CPU. `GLAUNCH` is a
 one-cycle command accepted only in `IDLE`; its zero-extended `addr11` operand
@@ -162,8 +173,16 @@ equality and less-than results into warp flags; if the lanes disagree on either
 result, the warp halts, because divergent warps are not supported. CPU SIMD and
 GPU-coordination opcodes are invalid in a warp and halt it.
 
+Divergence being unsupported means there is no per-lane predication: a lane that
+should be inactive cannot be branched around. Variable-length work such as a
+partial SIMT tail is therefore handled with an arithmetic 0/1 mask, and masked
+lanes still execute their loads, so every address a warp reaches during a masked
+iteration must lie inside installed RAM. This idiom relies on the signed
+comparison flags and assumes nonnegative indices below 2^15.
+
 Arithmetic, multiplication, and `VDOT` retain the low 16 bits. Logical shifts
-by 16 or more produce zero. Only `CMP` changes the comparison flags.
+by 16 or more produce zero. Only `CMP` changes the comparison flags, which are
+signed.
 
 Use `LUI` together with `LDI` and a logical operation such as `OR` to construct
 16-bit constants from two 8-bit immediate values.

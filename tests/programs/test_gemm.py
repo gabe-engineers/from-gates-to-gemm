@@ -2,8 +2,10 @@
 
 Every program in ``programs/gemm`` gets its own test, assembled and
 run against the same cases, so a new variant (for example a SIMD version) is
-covered without editing this file. A program that does not assemble yet is
-reported as skipped, so an in-progress variant does not fail the suite.
+covered without editing this file. A program listed in ``REQUIRED_PROGRAMS``
+must assemble, so a regression there fails the suite; any other program that
+does not assemble yet is reported as skipped, so an in-progress variant does
+not fail the suite.
 
 Each case builds a data image (M, N, P, the two matrices), runs the chip-level
 ``program_tb`` and compares every element of the product against a Python
@@ -34,6 +36,9 @@ RTL_FILELIST = REPOSITORY_ROOT / "rtl" / "filelists" / "chip.f"
 # Program memory map: 100=M, 101=N, 102=P, 103=A base, 104=B base, 115=C base.
 C_BASE = 116
 
+# Checked-in programs that must assemble; a failure here is a regression.
+REQUIRED_PROGRAMS = ("scalar.asm", "simd.asm", "simt.asm")
+
 # (M, N, P, A, B)
 GEMM_CASES = (
     (
@@ -62,6 +67,13 @@ GEMM_CASES = (
         2, 16, 2,
         [[i * 16 + k + 1 for k in range(16)] for i in range(2)],
         [[1, k % 3 + 1] for k in range(16)],
+    ),
+    # N exactly 8 is one full SIMD round with no tail, and these operands make
+    # every C entry exceed 65535 so the 16-bit accumulator must wrap.
+    (
+        1, 8, 2,
+        [[300] * 8],
+        [[300, 400] for _ in range(8)],
     ),
 )
 
@@ -148,7 +160,10 @@ class GemmTests(unittest.TestCase):
         )
         if assemble_result.returncode != 0:
             message = (assemble_result.stderr or "").strip().splitlines()
-            self.skipTest(f"{program.name} does not assemble yet: {message[-1] if message else ''}")
+            reason = f"{program.name} does not assemble: {message[-1] if message else ''}"
+            if program.name in REQUIRED_PROGRAMS:
+                self.fail(reason)
+            self.skipTest(reason)
 
         for case, (m, n, p, a, b) in enumerate(GEMM_CASES):
             with self.subTest(case=case, M=m, N=n, P=p):
@@ -183,6 +198,12 @@ for _program in _GEMM_PROGRAMS:
 class GemmDiscoveryTests(unittest.TestCase):
     def test_at_least_one_gemm_program_exists(self) -> None:
         self.assertTrue(_GEMM_PROGRAMS, "no GEMM programs found")
+
+    def test_required_gemm_programs_exist(self) -> None:
+        names = {program.name for program in _GEMM_PROGRAMS}
+        for required in REQUIRED_PROGRAMS:
+            with self.subTest(program=required):
+                self.assertIn(required, names, f"required GEMM program {required} is missing")
 
 
 if __name__ == "__main__":

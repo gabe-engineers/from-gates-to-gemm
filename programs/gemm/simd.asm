@@ -1,10 +1,14 @@
 # Matrix multiplication of matrix A size (M x N) and matrix B size (N x P) using CPU SIMD instructions
 #
 # B is stored transposed (B^T, P x N row-major), so C[i][j] = dot(A row i, B^T row j)
-# and both dot operands are contiguous, which VLD/VDOT require.
+# and both dot operands are contiguous. VLD loads eight-element chunks before
+# VDOT reduces the loaded vector registers.
+#
+# Branch, call, and launch targets are assembled word indices (the instruction
+# count), not source line numbers; comments and blank lines do not count.
 
 # Memory Layout:
-# 0 - 99: instructions
+# Locations 0-99 are reserved for code
 # 100: M
 # 101: N
 # 102: P
@@ -14,7 +18,13 @@
 # 106: function argument j
 # 107: function argument output pointer
 # 114: return address
-# 115: output (C) base pointer; C occupies M*P words from there
+# 115: output (C) base pointer; C is written row-major over M*P words from there
+# C must not overlap live metadata, A, or B^T.
+#
+# Execution constraints:
+# Matrix ranges and address calculations must remain within installed RAM without
+# 16-bit address wrap. Element products and accumulated sums retain their low
+# 16 bits.
 
 # Register Layout Core Program:
 # r1: M (outer loop bound)
@@ -91,11 +101,13 @@ HALT
 # r1: N, then the lane size (8)
 # r2: A pointer (A base + i*N)
 # r3: B^T pointer (B^T base + j*N)
-# r4: scratch (i*N, then A pointer + 8 / the A element)
+# r4: scratch (i*N, then A pointer + 8 / the A element / scalar-tail increment)
 # r5: scratch (j*N, then the VDOT result / the B element)
 # r6: output pointer, then the return address
 # r7: loop bound (A base + i*N + N)
 # r8: dot product result
+# v1: current eight-element A chunk
+# v2: current eight-element B^T chunk
 
 # Load the arguments
 LDI r1 101

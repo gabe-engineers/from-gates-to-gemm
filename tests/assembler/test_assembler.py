@@ -167,10 +167,10 @@ class AssemblerCliTests(AssemblerTestSupport, unittest.TestCase):
                 self.assert_fails(source)
 
     def test_program_size_is_physical_ram_capacity(self) -> None:
-        words = self.assemble("halt\n" * 4096)
-        self.assertEqual(len(words), 4096)
+        words = self.assemble("halt\n" * 1024)
+        self.assertEqual(len(words), 1024)
         self.assertTrue(all(word == "7800" for word in words))
-        self.assert_fails("halt\n" * 4097)
+        self.assert_fails("halt\n" * 1025)
 
 
 class AssemblerCpuIntegrationTests(AssemblerTestSupport, unittest.TestCase):

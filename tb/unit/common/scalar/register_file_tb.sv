@@ -45,7 +45,7 @@ module register_file_tb;
 
       if (read_data_a !== expected_a || read_data_b !== expected_b ||
           write_reg_data !== expected_write_reg_data) begin
-        $display(
+        $fatal(1,
             "FAILED Test #%d: reset=%b we=%b wa=%d wd=%h ra=%d rb=%d | got a=%h b=%h write_reg=%h | expected a=%h b=%h write_reg=%h",
             test_number, reset, write_enable, write_addr, write_data, read_addr_a, read_addr_b,
             read_data_a, read_data_b, write_reg_data, expected_a, expected_b,

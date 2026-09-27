@@ -1,17 +1,33 @@
-# Dot product program for 2 vectors of size N using SIMD CPU instructions with a scalar tail
-# Assumptions:
-# - Instruction memory goes from 0-99, the rest is data memory
-# - Size of vectors N is in memory location 100. The address first element of V1 and V2 are in memory locations 101 and 102 respectively
-# - Both vectors have size N
-# - Stores result in memory location 511
+# Dot product for two vectors of size N using SIMD CPU instructions with a scalar tail.
+#
+# Memory layout:
+# - Locations 0-99 are reserved for code
+# - mem[100] = N, mem[101] = V1 base, mem[102] = V2 base
+# - V1 occupies mem[V1 base .. V1 base + N - 1]
+# - V2 occupies mem[V2 base .. V2 base + N - 1]
+# - Result is written to mem[511]
+#
+# Register layout:
+# - r1 = remaining element count, then the result address
+# - r2 = current V1 pointer
+# - r3 = current V2 pointer
+# - r4 = SIMD stride (8), then scalar-tail stride (1)
+# - r5 = SIMD partial dot product, then current scalar V1 element
+# - r6 = accumulated dot product
+# - r7 = scalar-tail zero sentinel, then the result-address low byte
+# - r8 = current scalar V2 element, then its product with V1
+# - v1 = current eight-element V1 chunk
+# - v2 = current eight-element V2 chunk
+#
+# V1 and V2 contain N contiguous 16-bit elements.
 
-# Load parameters N, v1 and v2 into r1, r2, r3
+# Load parameters
 LDI r1 100
-LOAD r1 r1
+LOAD r1 r1 # r1 = N
 LDI r2 101
-LOAD r2 r2
+LOAD r2 r2 # r2 = V1
 LDI r3 102
-LOAD r3 r3
+LOAD r3 r3 # r3 = V2
 
 # SIMD loop: consume 8 elements at a time while at least 8 remain
 LDI r4 8 # number of lanes / SIMD stride

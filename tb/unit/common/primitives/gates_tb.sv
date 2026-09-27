@@ -30,30 +30,30 @@ module gates;
     a = 0;
     b = 0;
     #10;
-    if (and_out !== 0) $display("FAIL: 0 & 0");
-    if (or_out !== 0) $display("FAIL: 0 | 0");
-    if (xor_out !== 0) $display("FAIL: 0 ^ 0");
+    if (and_out !== 0) $fatal(1, "FAIL: 0 & 0");
+    if (or_out !== 0) $fatal(1, "FAIL: 0 | 0");
+    if (xor_out !== 0) $fatal(1, "FAIL: 0 ^ 0");
 
     a = 0;
     b = 1;
     #10;
-    if (and_out !== 0) $display("FAIL: 0 & 1");
-    if (or_out !== 1) $display("FAIL: 0 | 1");
-    if (xor_out !== 1) $display("FAIL: 0 ^ 1");
+    if (and_out !== 0) $fatal(1, "FAIL: 0 & 1");
+    if (or_out !== 1) $fatal(1, "FAIL: 0 | 1");
+    if (xor_out !== 1) $fatal(1, "FAIL: 0 ^ 1");
 
     a = 1;
     b = 0;
     #10;
-    if (and_out !== 0) $display("FAIL: 1 & 0");
-    if (or_out !== 1) $display("FAIL: 1 | 0");
-    if (xor_out !== 1) $display("FAIL: 1 ^ 0");
+    if (and_out !== 0) $fatal(1, "FAIL: 1 & 0");
+    if (or_out !== 1) $fatal(1, "FAIL: 1 | 0");
+    if (xor_out !== 1) $fatal(1, "FAIL: 1 ^ 0");
 
     a = 1;
     b = 1;
     #10;
-    if (and_out !== 1) $display("FAIL: 1 & 1");
-    if (or_out !== 1) $display("FAIL: 1 | 1");
-    if (xor_out !== 0) $display("FAIL: 1 ^ 1");
+    if (and_out !== 1) $fatal(1, "FAIL: 1 & 1");
+    if (or_out !== 1) $fatal(1, "FAIL: 1 | 1");
+    if (xor_out !== 0) $fatal(1, "FAIL: 1 ^ 1");
 
     $display("Tests finished");
     $finish;

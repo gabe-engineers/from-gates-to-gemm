@@ -1,3 +1,6 @@
+// Standalone 8x16-bit vector register, kept as a worked example and exercised
+// by its unit test. The chip does not instantiate it: live SIMD register
+// storage is rtl/cpu/datapath/vector_register_file.sv.
 module vector_register_16bit (
     input clk,
     input reset,

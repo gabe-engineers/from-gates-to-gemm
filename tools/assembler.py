@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 
 
-MAX_PROGRAM_INSTRUCTIONS = 4096
+MAX_PROGRAM_INSTRUCTIONS = 1024
 MAX_IMMEDIATE = 0xFF
 MAX_ADDRESS = 0x7FF
 
@@ -191,7 +191,7 @@ class Assembler:
                     if instruction_count >= MAX_PROGRAM_INSTRUCTIONS:
                         raise Exception(
                             f"line {line_num}: The program does not fit into the chip's memory. "
-                            "The biggest supported program is 4096 instructions"
+                            "The biggest supported program is 1024 instructions"
                         )
 
                     instruction, parsed_operands = self.validate(

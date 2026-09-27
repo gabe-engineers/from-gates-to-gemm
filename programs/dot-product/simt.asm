@@ -1,16 +1,31 @@
 # Dot product for two vectors of size N using the SIMT unit, with the CPU
 # reducing the per-lane partials.
 #
-# Assumptions:
-# - Instruction memory 0-99; data memory from 100
+# Memory layout:
+# - Locations 0-99 are reserved for code
 # - mem[100] = N, mem[101] = V1 base, mem[102] = V2 base
-# - N and every element index are non-negative and below 2^15, so the sign bit
-#   of (index - bound) is set exactly when index < bound
-# - Reads up to V1 base + 64 must still land in RAM (they are masked, not used)
-# - Each of the 8 lanes handles 8 contiguous elements. Out-of-range elements are
-#   multiplied by a 0/1 mask instead of branched over, so every lane runs the
-#   same number of iterations and the warp never diverges
-# - Per-lane partials at mem[104 + TID]; result at mem[511]
+# - V1 occupies mem[V1 base .. V1 base + N - 1]
+# - V2 occupies mem[V2 base .. V2 base + N - 1]
+# - Per-lane partials are stored at mem[104 + TID] (mem[104..111])
+# - Result is written to mem[511]
+#
+# Register layout (the CPU and each GPU lane have independent register files):
+# - CPU r1 = partial pointer, then result address
+# - CPU r2 = end of the partial range; CPU r3 = reduction increment (1)
+# - CPU r4 = accumulated dot product; CPU r5 = current partial, then result-address low byte
+# - GPU r1 = current V1 pointer, then partial-store address
+# - GPU r2 = current V2 pointer; GPU r3 = lane-local V1 end pointer
+# - GPU r4 = increment (1); GPU r5 = V1 bound (V1 base + N)
+# - GPU r6 = lane offset, then mask/product temporary, then TID at the partial store
+# - GPU r7 = lane stride / mask shift amount / current vector element
+# - GPU r8 = accumulated per-lane partial
+#
+# The 0/1 mask in the loop body zeroes the product of out-of-range lanes but
+# does not skip the loads: each lane always executes its full eight iterations,
+# so the loads still touch V1/V2 base through base + 63 (for N <= 64). Those
+# addresses must stay inside installed RAM. The mask relies on the signed
+# comparison flags and assumes nonnegative indices below 2^15.
+
 
 # CPU: launch the kernel, then reduce the per-lane partials
 GLAUNCH 2

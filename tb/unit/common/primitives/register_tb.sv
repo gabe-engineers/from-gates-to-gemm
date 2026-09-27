@@ -27,7 +27,7 @@ module register_tb;
       #10;
 
       if (data_out !== expected_out) begin
-        $display("FAIL - reset=%b write_enable=%b data_in=%b | data_out=%b expected=%b", reset,
+        $fatal(1, "FAIL - reset=%b write_enable=%b data_in=%b | data_out=%b expected=%b", reset,
                  write_enable, data_in, data_out, expected_out);
       end
     end

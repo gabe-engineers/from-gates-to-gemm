@@ -1,17 +1,31 @@
-# Dot product program for 2 vectors of size N using only scalar CPU instructions
-# Assumptions:
-# - Instruction memory goes from 0-99, the rest is data memory
-# - Size of vectors N is in memory location 100. The address first element of V1 and V2 are in memory locations 101 and 102 respectively
-# - Both vectors have size N
-# - Stores result in memory location 511
+# Dot product for two vectors of size N using only scalar CPU instructions.
+#
+# Memory layout:
+# - Locations 0-99 are reserved for code
+# - mem[100] = N, mem[101] = V1 base, mem[102] = V2 base
+# - V1 occupies mem[V1 base .. V1 base + N - 1]
+# - V2 occupies mem[V2 base .. V2 base + N - 1]
+# - Result is written to mem[511]
+#
+# Register layout:
+# - r1 = N during setup, then V1 end pointer, then the result address
+# - r2 = current V1 pointer
+# - r3 = current V2 pointer
+# - r4 = increment (1)
+# - r5 = current V1 element
+# - r6 = current V2 element
+# - r7 = element product, then the result-address low byte
+# - r8 = accumulated dot product
+#
+# V1 and V2 contain N contiguous 16-bit elements.
 
-# Load parameters N, v1 and v2 into r1, r2, r3
+# Load parameters
 LDI r1 100 
-LOAD r1 r1
+LOAD r1 r1 # r1 = N
 LDI r2 101
-LOAD r2 r2
+LOAD r2 r2 # r2 = V1
 LDI r3 102
-LOAD r3 r3
+LOAD r3 r3 # r3 = V2
 
 # Compute dot product
 ADD r1 r1 r2 # Memory boundary to stop multiplying
@@ -31,9 +45,3 @@ LDI r7 255
 OR r1 r1 r7
 STORE r1 r8
 HALT
-
-
-
-
-
-# Multiply every element of the vectors and start reducing the sum into a another memory location

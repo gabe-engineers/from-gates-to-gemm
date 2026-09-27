@@ -26,6 +26,11 @@ read_verilog -sv -Irtl/include \
 hierarchy -check -top chip
 proc
 check -assert
-synth -top chip
+# The RAM is modeled as a register array with ten write ports, so it expands
+# into a large discrete netlist. ABC technology mapping of that netlist is very
+# slow and memory-hungry and adds no diagnostic value for this gate; generic
+# synthesis up to the mapping boundary is what is checked here. The final tool
+# remains the authority for target mapping.
+synth -top chip -noabc
 check -assert
 stat

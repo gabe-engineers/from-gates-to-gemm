@@ -89,7 +89,7 @@ module program_tb;
     while ($fgets(
         program_line, program_handle
     )) begin
-      if (index >= 4096) $fatal(1, "program exceeds the 4096-word RAM: %s", program_file);
+      if (index >= 1024) $fatal(1, "program exceeds the 1024-word RAM: %s", program_file);
 
       scan_result = $sscanf(program_line, "%h", program_word);
       if (scan_result != 1) $fatal(1, "invalid hex word in program file: %s", program_file);
@@ -116,7 +116,7 @@ module program_tb;
       )) begin
         scan_result = $sscanf(data_line, "%h", data_word);
         if (scan_result == 1) begin
-          if (index >= 4096) $fatal(1, "data image exceeds the 4096-word RAM: %s", data_file);
+          if (index >= 1024) $fatal(1, "data image exceeds the 1024-word RAM: %s", data_file);
           @(negedge clk);
           load_enable  = 1'b1;
           load_address = index;
