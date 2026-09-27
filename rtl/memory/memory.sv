@@ -21,6 +21,8 @@ module memory (
   wire [7:0][15:0] gpu_read_words;
 
   // Access outside the installed RAM is architecturally undefined.
+  // Reads are combinational: an in-range addressed word is visible in the same
+  // cycle. This RAM model has no read latency or ready/valid handshake.
   assign cpu_read_data = ram[cpu_mem_request.address];
 
   generate
@@ -49,7 +51,8 @@ module memory (
     if (load_enable) ram[load_address] <= load_data;
   end
 
-  // Registers power up at zero so a program sees empty RAM before it writes.
+  // Initialize RAM to zero for simulation. Whether this maps to power-up
+  // initialization in an FPGA build depends on the selected device and toolchain.
   initial begin
     for (int i = 0; i < MEMORY_WORDS; i = i + 1) ram[i] = 16'b0;
   end

@@ -16,6 +16,8 @@ module warp (
   wire [7:0][15:0] lane_responses;
   wire [7:0][15:0] lane_mem_address;
   wire [7:0][15:0] lane_mem_write_data;
+  // An accepted launch uses start as a local warp reset and supplies the
+  // launch address to the control unit. A normal reset starts at address zero.
   wire warp_reset = reset || start;
   wire [15:0] reset_address = start ? start_address : 16'b0;
 
