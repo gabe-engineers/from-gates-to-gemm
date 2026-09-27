@@ -42,6 +42,10 @@ test-dotproduct-simt:
 test-gemm:
     just run-program programs/gemm/scalar.asm +DATA=programs/gemm/input.data +RESULT=116
 
+# Assemble and run the checked-in SIMD GEMM program (C is at 116..131).
+test-gemm-simd:
+    just run-program programs/gemm/simd.asm +DATA=programs/gemm/input.data +RESULT=116
+
 # Assemble and run the checked-in SIMT GEMM program (C is at 116..131).
 test-gemm-simt:
     just run-program programs/gemm/simt.asm +DATA=programs/gemm/input.data +RESULT=116

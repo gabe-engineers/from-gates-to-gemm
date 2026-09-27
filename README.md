@@ -16,18 +16,6 @@ From Gates to GEMM builds a small 16-bit computer in SystemVerilog, from logic g
 
 ![Chip architecture](docs/chip-architecture.svg)
 
-## Machine organization
-
-- Instructions and words are 16 bits.
-- Scalar register file: eight 16-bit registers, named `r1` through `r8`.
-- Vector register file: eight registers, named `v1` through `v8`, with eight
-  16-bit lanes per register.
-- Memory is word-addressed.
-- The PC and register-held memory addresses are 16 bits.
-- The supplied RAM contains 1024 words. Access outside the installed RAM range is
-  undefined behavior; architectural address width and physical RAM capacity are
-  intentionally separate.
-
 ## Simulation
 
 Install Python 3.10+, Icarus Verilog, Yosys, and `just`, then run:
@@ -42,67 +30,7 @@ just clean                                 # Remove generated build artifacts.
 
 Simulation output is written beneath `build/sim/`.
 
-### RTL hardware gate
-
-`just synth-check` checks only the design sources under `rtl/`, never `tb/`.
-It first rejects common simulation-only constructs such as queues,
-dynamic arrays, array locator methods, randomization, delays, and testbench
-system tasks. It then runs Yosys on the `chip` top level and writes its log to
-`build/synth/chip.log`.
-
-`test-all` runs this check first, so new RTL must pass both the policy guard and
-generic synthesis before the test suite passes. The final FPGA or ASIC synthesis
-tool remains the authority for target-specific mapping and timing.
-
-### Run an arbitrary assembly program
-
-The generic `program_tb` loads an assembled hex program, runs it until `HALT`,
-prints the final scalar registers, and reports one RAM word. It can also
-preload a data image so a program can read its inputs from RAM. It does not
-contain program-specific data or assertions.
-
-```sh
-just run-program path/to/program.asm
-```
-
-Extra arguments are passed through to the simulator, so a program that reads
-its inputs from memory can be given a data image and a result address:
-
-```sh
-just run-program foo.asm +DATA=foo.data +RESULT=511
-```
-
-For the checked-in dot-product samples, use `just test-dotproduct`,
-`just test-dotproduct-simd`, or `just test-dotproduct-simt`.
-
-That command assembles the source into `build/asm/program.hex`, then runs
-`program_tb`. To run an already-assembled image, use:
-
-```sh
-just test program_tb +PROGRAM=path/to/program.hex
-```
-
-`program_tb` accepts optional VVP plusargs when invoking the simulator
-directly: `+PROGRAM=path/to/program.hex`, `+DATA=path/to/data.hex`,
-`+DATA_BASE=100`, `+RESULT=511`, `+TIMEOUT=10000`, and
-`+VCD=build/sim/program.vcd`. The data image is a flat list of hex words loaded
-starting at `+DATA_BASE` (default 100); blank lines and `#` comments are
-allowed. `+RESULT` selects the RAM word reported after halt (default 511).
-
-## Execution timing
-
-The CPU uses a multi-cycle design:
-
-1. **FETCH/DECODE** captures the memory word in the instruction register.
-2. **EXECUTE** performs scalar/vector ALU work and register writeback.
-3. **MEMORY** performs scalar transfers in one cycle. `VLD` and `VST` use eight
-   memory cycles, one per vector lane.
-
-`HALT` stops instruction execution without clearing registers. Reset clears the
-PC, scalar registers, vector registers, and comparison flags and resumes
-fetching.
-
-### Memory and execution boundary
+## Memory and execution boundary
 
 RAM is one shared array of 1024 words. Reads are combinational: the addressed
 word appears in the same cycle, so there is no read latency and nothing to wait
@@ -121,39 +49,18 @@ registers.
 `GWAIT` stalls only the CPU until the warp halts; otherwise the CPU and GPU run
 concurrently against the same RAM.
 
-## Instruction set
+## Instruction set at a glance
 
-| Opcode | Assembly | Behavior |
+Programs use eight scalar registers (`r1`–`r8`). SIMD adds eight vector
+registers (`v1`–`v8`), each with eight 16-bit lanes. Arithmetic is 16-bit;
+`MUL` and `VDOT` retain their low 16 bits.
+
+| Area | Instructions | Purpose |
 | --- | --- | --- |
-| `0x00` | `LDI rd imm8` | Zero-extend an unsigned 8-bit immediate |
-| `0x01` | `MOV rd rs` | Copy a scalar register |
-| `0x02` | `ADD rd ra rb` | Add |
-| `0x03` | `SUB rd ra rb` | Subtract |
-| `0x04` | `AND rd ra rb` | Bitwise AND |
-| `0x05` | `OR rd ra rb` | Bitwise OR |
-| `0x06` | `XOR rd ra rb` | Bitwise XOR |
-| `0x07` | `SHL rd ra rb` | Logical left shift |
-| `0x08` | `SHR rd ra rb` | Logical right shift |
-| `0x09` | `MUL rd ra rb` | Multiply |
-| `0x0A` | `LOAD rd raddr` | Load one word |
-| `0x0B` | `STORE raddr rs` | Store one word; address operand comes first |
-| `0x0C` | `CMP ra rb` | Set the equality and signed less-than flags |
-| `0x0D` | `JMP addr11` | Absolute jump to a zero-extended 11-bit address |
-| `0x0E` | `JZ addr11` | Jump when the equality flag is set |
-| `0x0F` | `HALT` | Stop without clearing registers |
-| `0x10` | `VLD vd raddr` | Load eight consecutive words |
-| `0x11` | `VST raddr vs` | Store eight consecutive words; address first |
-| `0x12` | `VADD vd va vb` | Lane-wise addition |
-| `0x13` | `VSUB vd va vb` | Lane-wise subtraction |
-| `0x14` | `VMUL vd va vb` | Lane-wise multiplication |
-| `0x15` | `VDOT rd va vb` | Dot product into a scalar register |
-| `0x16` | `LUI rd imm8` | Load `imm8` into bits 15:8 and clear bits 7:0 |
-| `0x17` | `TID rd` | Write the executing thread ID (the scalar CPU always writes zero) |
-| `0x18` | `GLAUNCH addr11` | Start GPU execution at `addr11` if the GPU is idle; no-op while it is running |
-| `0x19` | `GWAIT addr11` | Stall the scalar CPU until the GPU is idle, then jump to `addr11` |
-| `0x1A` | `JLT addr11` | Jump when the less-than flag is set |
-| `0x1B` | `JR rd` | Jump to the address held in a scalar register |
-| `0x1C–0x1F` | Reserved/deferred | Unsupported; no assembler mnemonic |
+| Scalar compute | `LDI`, `LUI`, `MOV`, `ADD`, `SUB`, `AND`, `OR`, `XOR`, `SHL`, `SHR`, `MUL` | Build values and perform scalar computation. |
+| Memory and control | `LOAD`, `STORE`, `CMP`, `JMP`, `JZ`, `JLT`, `JR`, `HALT` | Access word-addressed RAM and implement loops. |
+| SIMD | `VLD`, `VST`, `VADD`, `VSUB`, `VMUL`, `VDOT` | Operate on eight lanes and reduce a vector dot product. |
+| SIMT GPU | `TID`, `GLAUNCH`, `GWAIT` | Identify a warp lane, launch the GPU kernel, and wait for it. |
 
 Unsupported opcodes stop the current CPU implementation with no register,
 memory, or GPU side effects; the PC has already advanced past the instruction.
@@ -186,20 +93,3 @@ signed.
 
 Use `LUI` together with `LDI` and a logical operation such as `OR` to construct
 16-bit constants from two 8-bit immediate values.
-
-## Encoding
-
-All reserved bits must be zero in assembler output.
-
-| Format | Bits, most significant first |
-| --- | --- |
-| Three registers | `opcode[5] A[3] B[3] C[3] reserved[2]` |
-| Two registers | `opcode[5] A[3] B[3] reserved[5]` |
-| One register | `opcode[5] A[3] reserved[8]` |
-| Immediate | `opcode[5] rd[3] immediate[8]` |
-| Jump | `opcode[5] address[11]` (`JMP`, `JZ`, `JLT`, `GLAUNCH`, and `GWAIT`) |
-| No operands | `opcode[5] reserved[11]` |
-
-Registers use zero-based three-bit encodings internally: assembly register `r1`
-or `v1` is encoded as zero, and `r8` or `v8` is encoded as seven. Operands occupy
-fields in assembly order, including address-first stores.
