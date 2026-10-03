@@ -20,3 +20,4 @@ rtl/gpu/warp/warp.sv
 rtl/gpu/gpu.sv
 rtl/memory/memory.sv
 rtl/top/chip.sv
+rtl/top/fpga_gemm_top.sv

@@ -5,6 +5,16 @@ build/
 *.vcd
 *.fst
 *.vvp
+.Xil/
+xsim.dir/
+xsim*.jou
+xsim*.log
+xelab.log
+xelab.pb
+xvlog.log
+xvlog.pb
+clockInfo.txt
+tight_setup_hold_pins.txt
 
 # Generated assembler and Python artifacts
 program.hex

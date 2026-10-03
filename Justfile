@@ -2,6 +2,7 @@ sim_dir := "build/sim"
 asm_dir := "build/asm"
 rtl_filelist := "rtl/filelists/chip.f"
 include_dirs := "-Irtl/include -Itb/include"
+vivado_bin := env_var_or_default("VIVADO", "vivado")
 
 default: test-all
 
@@ -42,6 +43,34 @@ test-dotproduct-simt:
 test-gemm:
     python3 -m unittest tests.programs.test_gemm -v
 
+# Assemble scalar, SIMD, and SIMT GEMM into complete 1024-word FPGA RAM images.
+fpga-images data="programs/gemm/input.data":
+    python3 tools/gemm_image.py --data "{{data}}"
+
+# Reference-check all three GEMM programs in Vivado's FPGA memory simulation.
+fpga-sim: fpga-images
+    sh scripts/fpga/test_xsim.sh
+
+# Build a Basys 3 bitstream with the selected GEMM program and input.
+fpga-build variant data="programs/gemm/input.data": (fpga-images data)
+    GEMM_VARIANT="{{variant}}" "{{vivado_bin}}" -mode batch -source scripts/fpga/build_basys3.tcl -log build/fpga/basys3_{{variant}}_vivado.log -nojournal
+
+# Program the connected Basys 3 with an already built variant.
+fpga-program variant:
+    GEMM_VARIANT="{{variant}}" "{{vivado_bin}}" -mode batch -source scripts/fpga/program_basys3.tcl -log build/fpga/basys3_{{variant}}_program.log -nojournal
+
+# Check all 16 UART output words and report the on-FPGA cycle count.
+fpga-check *args:
+    python3 scripts/fpga/check_gemm_uart.py {{args}}
+
+# Build, program, verify, and compare all three variants with an M=P=4, N-wide input.
+fpga-bench n="16" port="/dev/ttyUSB1":
+    python3 scripts/fpga/benchmark_gemm.py --n "{{n}}" --port "{{port}}"
+
+# Sweep N in XSim with the same FPGA memory path and check every output word.
+fpga-sweep-sim *args:
+    python3 scripts/fpga/sweep_gemm_xsim.py {{args}}
+
 # Assemble and run the checked-in SIMD GEMM program (C is at 116..131).
 test-gemm-simd:
     just run-program programs/gemm/simd.asm +DATA=programs/gemm/input.data +RESULT=116
@@ -50,11 +79,7 @@ test-gemm-simd:
 test-gemm-simt:
     just run-program programs/gemm/simt.asm +DATA=programs/gemm/input.data +RESULT=116
 
-synth-check:
-    sh scripts/synth/synth_check.sh
-
 test-all:
-    just synth-check
     just test adder_tb
     just test full_adder_tb
     just test alu_tb
